@@ -180,6 +180,7 @@ const Header = ({ toggleMode, mode }) => {
           {/* TaskList centrado grande */}
           <Typography
             variant="h6"
+            component="div"
             sx={{
               fontFamily: "'Inter', 'Poppins', 'Roboto', system-ui, -apple-system, sans-serif",
               fontWeight: 800,
@@ -195,7 +196,7 @@ const Header = ({ toggleMode, mode }) => {
               mt: 0.5,
             }}
           >
-            Lista de tareas
+            <span translate="no">TaskList</span>
           </Typography>
 
           {/* Fecha y hora centradas */}
@@ -287,7 +288,7 @@ const Header = ({ toggleMode, mode }) => {
               userSelect: 'none',
             }}
           >
-            TaskList
+            <span translate="no">TaskList</span>
           </Typography>
         </Box>
 

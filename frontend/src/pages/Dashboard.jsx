@@ -5,7 +5,7 @@ const Dashboard = () => {
   return (
     <Box>
       <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 3 }}>
-        Dashboard
+        <span translate="no">Dashboard</span>
       </Typography>
       <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
         <Typography variant="body1">

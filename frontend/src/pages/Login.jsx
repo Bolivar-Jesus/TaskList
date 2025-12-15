@@ -145,7 +145,7 @@ const Login = () => {
                             <Box>
                                 <Box sx={{ mb: 2, textAlign: 'left' }}>
                                     <Chip
-                                        label="TaskList · Gestión de tareas"
+                                        label={<span translate="no">TaskList · Gestión de tareas</span>}
                                         variant="outlined"
                                         sx={{
                                             borderColor: 'rgba(255,255,255,0.4)',
@@ -358,7 +358,7 @@ const Login = () => {
                                         color: '#6c8475',
                                     }}
                                 >
-                                    © {new Date().getFullYear()} TaskList · Plataforma interna para
+                                    © {new Date().getFullYear()} <span translate="no">TaskList</span> · Plataforma interna para
                                     equipos de sistemas.
                                 </Typography>
                             </Box>

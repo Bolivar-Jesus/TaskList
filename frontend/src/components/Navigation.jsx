@@ -26,6 +26,12 @@ const Navigation = () => {
     navigate(routes[newValue]);
   };
 
+  const tabLabels = isMobile 
+    ? ['Panel', 'Nueva', 'Tareas', 'Perfil']
+    : ['Dashboard', 'Crear Tarea', 'Mis Tareas', 'Mi Perfil'];
+
+  const tabIcons = [<DashboardIcon />, <CreateTaskIcon />, <TaskIcon />, <PersonIcon />];
+
   return (
     <Box
       sx={{
@@ -57,21 +63,10 @@ const Navigation = () => {
           },
         }}
       >
-        {isMobile ? (
-          <>
-            <Tab icon={<DashboardIcon />} iconPosition="start" label="Panel" />
-            <Tab icon={<CreateTaskIcon />} iconPosition="start" label="Nueva" />
-            <Tab icon={<TaskIcon />} iconPosition="start" label="Tareas" />
-            <Tab icon={<PersonIcon />} iconPosition="start" label="Perfil" />
-          </>
-        ) : (
-          <>
-            <Tab icon={<DashboardIcon />} iconPosition="start" label="Dashboard" />
-            <Tab icon={<CreateTaskIcon />} iconPosition="start" label="Crear Tarea" />
-            <Tab icon={<TaskIcon />} iconPosition="start" label="Mis Tareas" />
-            <Tab icon={<PersonIcon />} iconPosition="start" label="Mi Perfil" />
-          </>
-        )}
+        <Tab icon={tabIcons[0]} iconPosition="start" label={<span translate="no">{tabLabels[0]}</span>} />
+        <Tab icon={tabIcons[1]} iconPosition="start" label={tabLabels[1]} />
+        <Tab icon={tabIcons[2]} iconPosition="start" label={tabLabels[2]} />
+        <Tab icon={tabIcons[3]} iconPosition="start" label={tabLabels[3]} />
       </Tabs>
     </Box>
   );
