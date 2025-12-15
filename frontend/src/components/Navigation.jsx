@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Tabs, Tab, Box } from '@mui/material';
+import { Tabs, Tab, Box, useMediaQuery, useTheme } from '@mui/material';
 import CreateTaskIcon from '@mui/icons-material/AddTask';
 import TaskIcon from '@mui/icons-material/Assignment';
 import PersonIcon from '@mui/icons-material/Person';
@@ -9,6 +9,8 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 const Navigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const getTabValue = () => {
     const path = location.pathname;
@@ -27,9 +29,9 @@ const Navigation = () => {
   return (
     <Box
       sx={{
-        backgroundColor: (theme) => theme.palette.background.paper,
-        borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-        boxShadow: (theme) => theme.shadows[1],
+        backgroundColor: (t) => t.palette.background.paper,
+        borderBottom: (t) => `1px solid ${t.palette.divider}`,
+        boxShadow: (t) => t.shadows[1],
       }}
     >
       <Tabs
@@ -39,23 +41,37 @@ const Navigation = () => {
         scrollButtons="auto"
         sx={{
           '& .MuiTab-root': {
-            minHeight: 64,
-            color: (theme) => theme.palette.text.secondary,
+            minHeight: isMobile ? 56 : 64,
+            minWidth: isMobile ? 'auto' : 'unset',
+            px: isMobile ? 1 : 2,
+            fontSize: isMobile ? '0.75rem' : '0.875rem',
+            color: (t) => t.palette.text.secondary,
             fontWeight: 500,
             '&.Mui-selected': {
-              color: (theme) => theme.palette.primary.main,
+              color: (t) => t.palette.primary.main,
             },
           },
           '& .MuiTabs-indicator': {
-            backgroundColor: (theme) => theme.palette.primary.main,
+            backgroundColor: (t) => t.palette.primary.main,
             height: 3,
           },
         }}
       >
-        <Tab icon={<DashboardIcon />} iconPosition="start" label="Dashboard" />
-        <Tab icon={<CreateTaskIcon />} iconPosition="start" label="Crear Tarea" />
-        <Tab icon={<TaskIcon />} iconPosition="start" label="Mis Tareas" />
-        <Tab icon={<PersonIcon />} iconPosition="start" label="Mi Perfil" />
+        {isMobile ? (
+          <>
+            <Tab icon={<DashboardIcon />} iconPosition="start" label="Panel" />
+            <Tab icon={<CreateTaskIcon />} iconPosition="start" label="Nueva" />
+            <Tab icon={<TaskIcon />} iconPosition="start" label="Tareas" />
+            <Tab icon={<PersonIcon />} iconPosition="start" label="Perfil" />
+          </>
+        ) : (
+          <>
+            <Tab icon={<DashboardIcon />} iconPosition="start" label="Dashboard" />
+            <Tab icon={<CreateTaskIcon />} iconPosition="start" label="Crear Tarea" />
+            <Tab icon={<TaskIcon />} iconPosition="start" label="Mis Tareas" />
+            <Tab icon={<PersonIcon />} iconPosition="start" label="Mi Perfil" />
+          </>
+        )}
       </Tabs>
     </Box>
   );
