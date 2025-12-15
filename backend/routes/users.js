@@ -16,6 +16,9 @@ router.get('/me', authenticateUser, async (req, res) => {
       name: user.name,
       picture: user.picture,
       role: user.role,
+      phone: user.phone,
+      bio: user.bio,
+      timeFormat: user.timeFormat,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
@@ -30,7 +33,7 @@ router.get('/me', authenticateUser, async (req, res) => {
 // Actualizar perfil del usuario
 router.put('/me', authenticateUser, async (req, res) => {
   try {
-    const { name, email, picture, role } = req.body;
+    const { name, email, picture, role, phone, bio, timeFormat } = req.body;
     const user = await User.findById(req.user._id);
 
     if (!user) {
@@ -42,11 +45,19 @@ router.put('/me', authenticateUser, async (req, res) => {
       return res.status(400).json({ error: 'Rol inválido.' });
     }
 
+    // Validar timeFormat si se proporciona
+    if (timeFormat && !['12h', '24h'].includes(timeFormat)) {
+      return res.status(400).json({ error: 'Formato de hora inválido. Use 12h o 24h.' });
+    }
+
     // Actualizar campos si se proporcionan
     if (name !== undefined) user.name = name;
     if (email !== undefined) user.email = email;
     if (picture !== undefined) user.picture = picture;
     if (role !== undefined) user.role = role;
+    if (phone !== undefined) user.phone = phone;
+    if (bio !== undefined) user.bio = bio;
+    if (timeFormat !== undefined) user.timeFormat = timeFormat;
 
     await user.save();
 
@@ -57,6 +68,9 @@ router.put('/me', authenticateUser, async (req, res) => {
       name: user.name,
       picture: user.picture,
       role: user.role,
+      phone: user.phone,
+      bio: user.bio,
+      timeFormat: user.timeFormat,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

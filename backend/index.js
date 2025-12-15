@@ -100,6 +100,9 @@ app.post('/auth/google', async (req, res) => {
       name: user.name,
       picture: user.picture,
       role: user.role,
+      phone: user.phone,
+      bio: user.bio,
+      timeFormat: user.timeFormat,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
