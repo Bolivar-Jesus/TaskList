@@ -256,15 +256,15 @@ const Profile = () => {
           <Grid container spacing={2} sx={{ mb: 3 }}>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth size="small">
-                <InputLabel>Formato de Hora</InputLabel>
+                <InputLabel>Selecciona un formato</InputLabel>
                 <Select
                   name="timeFormat"
                   value={formData.timeFormat}
-                  label="Formato de Hora"
+                  label="Selecciona un formato"
                   onChange={handleInputChange}
                 >
-                  <MenuItem value="24h">24 Horas (Ej: 14:30:45)</MenuItem>
-                  <MenuItem value="12h">12 Horas (Ej: 2:30:45 PM)</MenuItem>
+                  <MenuItem value="24h">Formato 24 horas</MenuItem>
+                  <MenuItem value="12h">Formato 12 horas (con AM/PM)</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -276,29 +276,32 @@ const Profile = () => {
                   p: 2,
                   backgroundColor: 'action.hover',
                   display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="caption" color="textSecondary">
-                    Vista Previa
-                  </Typography>
-                  <Typography variant="h6" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
-                    {formData.timeFormat === '12h'
-                      ? new Date().toLocaleTimeString('es-ES', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit',
-                          hour12: true,
-                        })
-                      : new Date().toLocaleTimeString('es-ES', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit',
-                        })}
-                  </Typography>
-                </Box>
+                <Typography variant="caption" color="textSecondary" sx={{ mb: 1 }}>
+                  Vista Previa
+                </Typography>
+                <Typography variant="h6" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                  {formData.timeFormat === '12h'
+                    ? new Date().toLocaleTimeString('es-ES', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: true,
+                      })
+                    : new Date().toLocaleTimeString('es-ES', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false,
+                      })}
+                </Typography>
+                <Typography variant="caption" color="textSecondary" sx={{ mt: 1 }}>
+                  {formData.timeFormat === '24h' ? 'Ej: 14:30:45' : 'Ej: 2:30:45 PM'}
+                </Typography>
               </Paper>
             </Grid>
           </Grid>
