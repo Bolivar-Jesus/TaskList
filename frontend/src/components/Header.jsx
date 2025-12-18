@@ -194,6 +194,7 @@ const Header = ({ toggleMode, mode }) => {
           <Typography
             variant="h6"
             component="div"
+            onClick={() => navigate('/dashboard')}
             sx={{
               fontFamily: "'Inter', 'Poppins', 'Roboto', system-ui, -apple-system, sans-serif",
               fontWeight: 800,
@@ -207,6 +208,11 @@ const Header = ({ toggleMode, mode }) => {
               textAlign: 'center',
               width: '100%',
               mt: 0.5,
+              cursor: 'pointer',
+              transition: 'opacity 0.2s ease',
+              '&:hover': {
+                opacity: 0.8,
+              },
             }}
           >
             <span translate="no">TaskList</span>
@@ -288,6 +294,7 @@ const Header = ({ toggleMode, mode }) => {
           <Typography
             variant="h4"
             component="div"
+            onClick={() => navigate('/dashboard')}
             sx={{
               fontFamily: "'Inter', 'Poppins', 'Roboto', system-ui, -apple-system, sans-serif",
               fontWeight: 800,
@@ -299,6 +306,11 @@ const Header = ({ toggleMode, mode }) => {
               backgroundClip: 'text',
               textShadow: '0 2px 8px rgba(0,0,0,0.1)',
               userSelect: 'none',
+              cursor: 'pointer',
+              transition: 'opacity 0.2s ease',
+              '&:hover': {
+                opacity: 0.8,
+              },
             }}
           >
             <span translate="no">TaskList</span>
