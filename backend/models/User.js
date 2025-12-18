@@ -30,6 +30,21 @@ const userSchema = new mongoose.Schema(
       enum: ['gives_orders', 'receives_orders', 'both'],
       default: null, // Se configura en el primer login
     },
+    phone: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    bio: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    timeFormat: {
+      type: String,
+      enum: ['12h', '24h'],
+      default: '24h',
+    },
     createdAt: {
       type: Date,
       default: Date.now,
