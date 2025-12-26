@@ -6,6 +6,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { connectDB } from './config/database.js';
 import User from './models/User.js';
 import userRoutes from './routes/users.js';
+import teamRoutes from './routes/teams.js';
 
 dotenv.config();
 
@@ -34,7 +35,9 @@ app.use(
   })
 );
 
-app.use(express.json());
+// Aumentar límite de payload para imágenes en base64
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Ruta de prueba
 app.get('/', (req, res) => {
@@ -43,6 +46,9 @@ app.get('/', (req, res) => {
 
 // Rutas de usuarios
 app.use('/api/users', userRoutes);
+
+// Rutas de equipos
+app.use('/api/teams', teamRoutes);
 
 // Ruta para verificar el token de Google enviado desde el frontend
 app.post('/auth/google', async (req, res) => {
