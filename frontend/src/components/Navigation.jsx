@@ -5,6 +5,7 @@ import CreateTaskIcon from '@mui/icons-material/AddTask';
 import TaskIcon from '@mui/icons-material/Assignment';
 import PersonIcon from '@mui/icons-material/Person';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import GroupIcon from '@mui/icons-material/Group';
 
 const Navigation = () => {
   const navigate = useNavigate();
@@ -17,20 +18,21 @@ const Navigation = () => {
     if (path === '/dashboard') return 0;
     if (path === '/create-task') return 1;
     if (path === '/tasks') return 2;
-    if (path === '/profile') return 3;
+    if (path === '/teams') return 3;
+    if (path === '/profile') return 4;
     return false;
   };
 
   const handleChange = (event, newValue) => {
-    const routes = ['/dashboard', '/create-task', '/tasks', '/profile'];
+    const routes = ['/dashboard', '/create-task', '/tasks', '/teams', '/profile'];
     navigate(routes[newValue]);
   };
 
   const tabLabels = isMobile 
-    ? ['Panel', 'Nueva', 'Tareas', 'Perfil']
-    : ['Dashboard', 'Crear Tarea', 'Mis Tareas', 'Mi Perfil'];
+    ? ['Panel', 'Nueva', 'Tareas', 'Equipos', 'Perfil']
+    : ['Dashboard', 'Crear Tarea', 'Mis Tareas', 'Equipos', 'Mi Perfil'];
 
-  const tabIcons = [<DashboardIcon />, <CreateTaskIcon />, <TaskIcon />, <PersonIcon />];
+  const tabIcons = [<DashboardIcon />, <CreateTaskIcon />, <TaskIcon />, <GroupIcon />, <PersonIcon />];
 
   return (
     <Box
@@ -67,6 +69,7 @@ const Navigation = () => {
         <Tab icon={tabIcons[1]} iconPosition="start" label={tabLabels[1]} />
         <Tab icon={tabIcons[2]} iconPosition="start" label={tabLabels[2]} />
         <Tab icon={tabIcons[3]} iconPosition="start" label={tabLabels[3]} />
+        <Tab icon={tabIcons[4]} iconPosition="start" label={tabLabels[4]} />
       </Tabs>
     </Box>
   );

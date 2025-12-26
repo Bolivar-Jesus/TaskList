@@ -169,7 +169,7 @@ const Login = () => {
                                         mx: 'auto',
                                     }}
                                 >
-                                    TaskList es el panel de control para tu equipo de sistemas:
+                                    TaskList es el panel de control para tu equipo de trabajo que:
                                     centraliza tareas, incidentes y proyectos en una vista clara,
                                     colaborativa y accionable.
                                 </Typography>
@@ -253,7 +253,7 @@ const Login = () => {
                                         sx={{ color: 'rgba(255,255,255,0.8)' }}
                                     >
                                         Diseñado para squads de TI, soporte, desarrollo y
-                                        operaciones.
+                                        entorno académico.
                                     </Typography>
                                 </Stack>
                             </Box>
@@ -359,7 +359,7 @@ const Login = () => {
                                     }}
                                 >
                                     © {new Date().getFullYear()} <span translate="no">TaskList</span> · Plataforma interna para
-                                    equipos de sistemas.
+                                    equipos de trabajo.
                                 </Typography>
                             </Box>
                         </Box>

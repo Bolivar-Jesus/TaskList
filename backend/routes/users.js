@@ -4,6 +4,41 @@ import { authenticateUser } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// ⭐ IMPORTANTE: Esta ruta DEBE estar PRIMERA (antes de /me)
+// Obtener lista de todos los usuarios (para agregar miembros a equipos)
+router.get('/', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Se requiere el header x-user-id' });
+    }
+
+    // Validar que el usuario exista
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(401).json({ error: 'Usuario no encontrado' });
+    }
+
+    const users = await User.find({})
+      .select('_id name email picture')
+      .sort({ name: 1 });
+
+    const usersList = users.map((u) => ({
+      _id: u._id.toString(),
+      id: u._id.toString(),
+      name: u.name,
+      email: u.email,
+      picture: u.picture,
+    }));
+
+    return res.json({ users: usersList });
+  } catch (error) {
+    console.error('❌ Error obteniendo usuarios:', error);
+    return res.status(500).json({ error: 'Error al obtener los usuarios.' });
+  }
+});
+
 // Obtener perfil del usuario autenticado
 router.get('/me', authenticateUser, async (req, res) => {
   try {

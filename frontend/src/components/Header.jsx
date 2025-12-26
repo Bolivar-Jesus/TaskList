@@ -38,7 +38,6 @@ const Header = ({ toggleMode, mode }) => {
 
   const formatTime = (date) => {
     const timeFormat = user?.timeFormat || '24h';
-    console.log('Formato actual:', timeFormat); // Log para debugging
     
     if (timeFormat === '12h') {
       return date.toLocaleTimeString('es-ES', {

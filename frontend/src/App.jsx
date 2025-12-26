@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import CreateTask from './pages/CreateTask';
 import Tasks from './pages/Tasks';
+import Teams from './pages/Teams';
 import MainLayout from './components/MainLayout';
 import { alertSuccess, alertError } from './utils/alert';
 import { useEffect } from 'react';
@@ -90,6 +91,16 @@ function AppRoutes({ mode, toggleMode }) {
           <ProtectedRoute>
             <MainLayout mode={mode} toggleMode={toggleMode}>
               <Profile />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teams"
+        element={
+          <ProtectedRoute>
+            <MainLayout mode={mode} toggleMode={toggleMode}>
+              <Teams />
             </MainLayout>
           </ProtectedRoute>
         }
