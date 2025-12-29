@@ -6,11 +6,6 @@ dotenv.config();
 // Limpiar y obtener la URI de MongoDB
 let MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/tasklist';
 
-// Debug: mostrar qué se está leyendo (solo los primeros caracteres por seguridad)
-if (MONGODB_URI) {
-  console.log('🔍 URI detectada:', MONGODB_URI.substring(0, 30) + '...');
-}
-
 // Eliminar espacios y comillas si las hay
 MONGODB_URI = MONGODB_URI.trim().replace(/^["']|["']$/g, '');
 
@@ -29,9 +24,6 @@ export const connectDB = async () => {
       throw new Error(`URI inválida. Debe empezar con "mongodb://" o "mongodb+srv://". URI recibida: ${MONGODB_URI.substring(0, 20)}...`);
     }
     
-    console.log('🔄 Intentando conectar a MongoDB...');
-    console.log('🔗 URI (sin credenciales):', MONGODB_URI.replace(/:[^:@]+@/, ':****@'));
-    
     // Intentar conectar con opciones más permisivas
     await mongoose.connect(MONGODB_URI, {
       serverSelectionTimeoutMS: 30000, // 30 segundos de timeout
@@ -40,10 +32,6 @@ export const connectDB = async () => {
       retryWrites: true,
       w: 'majority',
     });
-    
-    console.log('✅ MongoDB conectado correctamente');
-    console.log('📊 Estado de conexión:', mongoose.connection.readyState === 1 ? 'Conectado' : 'Desconectado');
-    console.log('📦 Base de datos:', mongoose.connection.db?.databaseName || 'N/A');
     
     // Escuchar eventos de conexión
     mongoose.connection.on('error', (err) => {

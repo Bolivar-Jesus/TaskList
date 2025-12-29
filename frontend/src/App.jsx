@@ -151,12 +151,6 @@ function App() {
     // Función para alternar
     const toggleMode = () => setMode((prev) => prev === 'light' ? 'dark' : 'light');
 
-    if (!GOOGLE_CLIENT_ID) {
-      console.warn(
-        '⚠️ VITE_GOOGLE_CLIENT_ID no está definido. Configúralo en el archivo .env del frontend.'
-      );
-    }
-
     return (
       <ThemeProvider theme={theme}>
         <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID || ''}>

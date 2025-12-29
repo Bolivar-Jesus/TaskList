@@ -87,7 +87,6 @@ const Tasks = () => {
       const data = await response.json();
       setTasks(data.tasks || []);
     } catch (error) {
-      console.error('Error:', error);
       alertError(`❌ Error: ${error.message || 'No se pudieron cargar las tareas'}`);
     } finally {
       setLoading(false);
@@ -246,7 +245,6 @@ const Tasks = () => {
       handleCloseDialog();
       fetchTasks();
     } catch (error) {
-      console.error('Error:', error);
       alertError(`❌ Error: ${error.message || 'No se pudo guardar la tarea'}`);
     } finally {
       setLoading(false);
@@ -280,7 +278,6 @@ const Tasks = () => {
       alertSuccess('✅ Tarea eliminada correctamente');
       fetchTasks();
     } catch (error) {
-      console.error('Error:', error);
       alertError(`❌ Error: ${error.message || 'No se pudo eliminar la tarea'}`);
     } finally {
       setLoading(false);
@@ -312,7 +309,6 @@ const Tasks = () => {
       alertSuccess('✅ Tarea marcada como completada');
       fetchTasks();
     } catch (error) {
-      console.error('Error:', error);
       alertError(`❌ Error: ${error.message || 'No se pudo completar la tarea'}`);
     } finally {
       setLoading(false);

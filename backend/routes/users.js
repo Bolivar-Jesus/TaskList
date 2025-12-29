@@ -34,7 +34,6 @@ router.get('/', async (req, res) => {
 
     return res.json({ users: usersList });
   } catch (error) {
-    console.error('❌ Error obteniendo usuarios:', error);
     return res.status(500).json({ error: 'Error al obtener los usuarios.' });
   }
 });
@@ -60,7 +59,6 @@ router.get('/me', authenticateUser, async (req, res) => {
 
     return res.json({ user: userResponse });
   } catch (error) {
-    console.error('Error obteniendo perfil:', error);
     return res.status(500).json({ error: 'Error al obtener el perfil del usuario.' });
   }
 });
@@ -115,7 +113,6 @@ router.put('/me', authenticateUser, async (req, res) => {
       user: userResponse,
     });
   } catch (error) {
-    console.error('Error actualizando perfil:', error);
     if (error.code === 11000) {
       return res.status(400).json({ error: 'El email ya está en uso.' });
     }
@@ -141,7 +138,6 @@ router.get('/list', authenticateUser, async (req, res) => {
 
     return res.json({ users: usersList });
   } catch (error) {
-    console.error('Error obteniendo lista de usuarios:', error);
     return res.status(500).json({ error: 'Error al obtener la lista de usuarios.' });
   }
 });

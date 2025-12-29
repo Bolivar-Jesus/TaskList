@@ -81,7 +81,6 @@ const MembersModal = ({ open, onClose, onSave, selectedMembers = [] }) => {
       }));
       setUsers(processedUsers);
     } catch (error) {
-      console.error('Error:', error);
       alertError('No se pudieron cargar los usuarios');
     } finally {
       setLoading(false);
