@@ -106,7 +106,7 @@ const MembersModal = ({ open, onClose, onSave, selectedMembers = [] }) => {
 
   const handleSave = () => {
     const selectedUserObjects = users.filter((u) => selectedUsers.includes(u._id || u.id));
-    onSave(selectedUserObjects);
+    onSave(selectedUserObjects.map(u => u._id || u.id));
   };
 
   const handleSelectAll = () => {
@@ -118,9 +118,20 @@ const MembersModal = ({ open, onClose, onSave, selectedMembers = [] }) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Agregar Miembros al Equipo</DialogTitle>
-      <DialogContent sx={{ pt: 2 }}>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="sm" 
+      fullWidth
+      PaperProps={{
+        sx: {
+          backgroundColor: theme.palette.mode === 'dark' ? '#424242' : '#ffffff',
+          color: theme.palette.text.primary,
+        },
+      }}
+    >
+      <DialogTitle sx={{ color: theme.palette.text.primary }}>Agregar Miembros al Equipo</DialogTitle>
+      <DialogContent sx={{ pt: 2, backgroundColor: theme.palette.mode === 'dark' ? '#424242' : '#ffffff' }}>
         <TextField
           fullWidth
           placeholder="Buscar por nombre o email..."
@@ -149,7 +160,13 @@ const MembersModal = ({ open, onClose, onSave, selectedMembers = [] }) => {
         ) : (
           <>
             {/* Opción "Seleccionar todos" */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, pb: 2, borderBottom: '1px solid #eee' }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              mb: 2, 
+              pb: 2, 
+              borderBottom: `1px solid ${theme.palette.mode === 'dark' ? '#555' : '#eee'}`
+            }}>
               <Checkbox
                 checked={
                   filteredUsers.length > 0 &&
@@ -178,15 +195,15 @@ const MembersModal = ({ open, onClose, onSave, selectedMembers = [] }) => {
                   onClick={() => handleSelectUser(u._id || u.id)}
                   sx={{
                     backgroundColor: selectedUsers.includes(u._id || u.id)
-                      ? theme.palette.mode === 'dark' ? '#1565c0' : '#e3f2fd'
+                      ? theme.palette.mode === 'dark' ? '#1565c0' : 'rgba(21, 101, 192, 0.15)'
                       : 'transparent',
                     cursor: 'pointer',
                     borderRadius: 1,
                     mb: 0.5,
                     '&:hover': {
                       backgroundColor: selectedUsers.includes(u._id || u.id)
-                        ? theme.palette.mode === 'dark' ? '#0d47a1' : '#90caf9'
-                        : '#999999',
+                        ? theme.palette.mode === 'dark' ? '#0d47a1' : 'rgba(21, 101, 192, 0.25)'
+                        : 'rgba(153, 153, 153, 0.15)',
                     },
                   }}
                 >
@@ -214,7 +231,12 @@ const MembersModal = ({ open, onClose, onSave, selectedMembers = [] }) => {
             </List>
 
             {selectedUsers.length > 0 && (
-              <Box sx={{ mt: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
+              <Box sx={{ 
+                mt: 2, 
+                p: 2, 
+                backgroundColor: theme.palette.mode === 'dark' ? '#333' : '#f5f5f5', 
+                borderRadius: 1 
+              }}>
                 <Typography variant="caption" color="textSecondary">
                   {selectedUsers.length} usuario(s) seleccionado(s)
                 </Typography>
@@ -223,7 +245,11 @@ const MembersModal = ({ open, onClose, onSave, selectedMembers = [] }) => {
           </>
         )}
       </DialogContent>
-      <DialogActions sx={{ p: 2 }}>
+      <DialogActions sx={{ 
+        p: 2,
+        backgroundColor: theme.palette.mode === 'dark' ? '#424242' : '#ffffff',
+        borderTop: `1px solid ${theme.palette.mode === 'dark' ? '#555' : '#eee'}`
+      }}>
         <Button onClick={onClose}>Cancelar</Button>
         <Button
           onClick={handleSave}

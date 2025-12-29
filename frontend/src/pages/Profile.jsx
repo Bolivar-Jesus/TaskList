@@ -304,6 +304,7 @@ const Profile = () => {
                     size="small"
                     error={fieldErrors.name !== ''}
                     disabled={(editingField && editingField !== 'name') || (fieldErrors.email !== '' || fieldErrors.phone !== '')}
+                    inputProps={{ maxLength: 30 }}
                     sx={{
                       '& .MuiOutlinedInput-root': {
                         borderColor: fieldErrors.name ? '#d32f2f' : 'rgba(0, 0, 0, 0.23)',
@@ -337,6 +338,7 @@ const Profile = () => {
                     size="small"
                     error={fieldErrors.email !== ''}
                     disabled={(editingField && editingField !== 'email') || (fieldErrors.name !== '' || fieldErrors.phone !== '')}
+                    inputProps={{ maxLength: 40 }}
                     sx={{
                       '& .MuiOutlinedInput-root': {
                         borderColor: fieldErrors.email ? '#d32f2f' : 'rgba(0, 0, 0, 0.23)',
@@ -370,6 +372,7 @@ const Profile = () => {
                     placeholder="1234567890"
                     error={fieldErrors.phone !== ''}
                     disabled={(editingField && editingField !== 'phone') || (fieldErrors.name !== '' || fieldErrors.email !== '')}
+                    inputProps={{ maxLength: 10 }}
                     sx={{
                       '& .MuiOutlinedInput-root': {
                         borderColor: fieldErrors.phone ? '#d32f2f' : 'rgba(0, 0, 0, 0.23)',
