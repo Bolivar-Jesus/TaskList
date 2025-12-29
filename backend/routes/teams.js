@@ -18,11 +18,33 @@ router.get('/', async (req, res) => {
     }
 
     const teams = await Team.find({ createdBy: userId })
-      .populate('members', 'name email picture')
+      .populate({
+        path: 'members',
+      })
       .populate('createdBy', 'name email picture')
       .sort({ createdAt: -1 });
 
-    res.json({ teams });
+    // Asegurar que todos los campos estén presentes
+    const teamsWithFullMembers = teams.map(team => {
+      return {
+        ...team.toObject(),
+        members: team.members.map(member => {
+          if (typeof member === 'object' && member._id) {
+            return {
+              _id: member._id,
+              name: member.name,
+              email: member.email,
+              picture: member.picture,
+              phone: member.phone || null,
+              createdAt: member.createdAt,
+            };
+          }
+          return member;
+        })
+      };
+    });
+
+    res.json({ teams: teamsWithFullMembers });
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener equipos' });
   }
@@ -62,12 +84,26 @@ router.post('/', async (req, res) => {
     });
 
     await newTeam.save();
-    await newTeam.populate('members', 'name email picture');
+    await newTeam.populate('members');
     await newTeam.populate('createdBy', 'name email picture');
+
+    // Asegurar que todos los campos estén presentes
+    const teamObj = newTeam.toObject();
+    const teamWithFullMembers = {
+      ...teamObj,
+      members: teamObj.members.map(member => ({
+        _id: member._id,
+        name: member.name,
+        email: member.email,
+        picture: member.picture,
+        phone: member.phone || null,
+        createdAt: member.createdAt,
+      }))
+    };
 
     res.status(201).json({
       message: 'Equipo creado exitosamente',
-      team: newTeam,
+      team: teamWithFullMembers,
     });
   } catch (error) {
     res.status(500).json({ error: 'Error al crear el equipo' });
@@ -118,12 +154,26 @@ router.put('/:teamId', async (req, res) => {
     if (image !== undefined) team.image = image || null;
 
     await team.save();
-    await team.populate('members', 'name email picture');
+    await team.populate('members');
     await team.populate('createdBy', 'name email picture');
+
+    // Asegurar que todos los campos estén presentes
+    const teamObj = team.toObject();
+    const teamWithFullMembers = {
+      ...teamObj,
+      members: teamObj.members.map(member => ({
+        _id: member._id,
+        name: member.name,
+        email: member.email,
+        picture: member.picture,
+        phone: member.phone || null,
+        createdAt: member.createdAt,
+      }))
+    };
 
     res.json({
       message: 'Equipo actualizado exitosamente',
-      team,
+      team: teamWithFullMembers,
     });
   } catch (error) {
     res.status(500).json({ error: 'Error al actualizar el equipo' });

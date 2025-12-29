@@ -32,6 +32,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useAuth } from '../context/AuthContext';
 import { alertSuccess, alertError } from '../utils/alert';
 import MembersModal from '../components/MembersModal';
+import TeamMembersDisplay from '../components/TeamMembersDisplay';
+import TeamImageModal from '../components/TeamImageModal';
 
 const Teams = () => {
   const { user } = useAuth();
@@ -253,12 +255,48 @@ const Teams = () => {
     setOpenMembersModal(true);
   };
 
-  const handleSaveMembers = (newMembers) => {
-    setFormData((prev) => ({
-      ...prev,
-      members: newMembers,
-    }));
-    setOpenMembersModal(false);
+  const handleSaveMembers = async (newMemberIds) => {
+    if (!selectedTeamForMembers) return;
+
+    setLoading(true);
+    try {
+      const teamId = selectedTeamForMembers._id;
+      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/teams/${teamId}`;
+      
+      const response = await fetch(url, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': user.id,
+          },
+          body: JSON.stringify({
+            name: selectedTeamForMembers.name,
+            description: selectedTeamForMembers.description,
+            image: selectedTeamForMembers.image,
+            members: newMemberIds,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Error al agregar miembros');
+      }
+
+      const data = await response.json();
+      
+      // Actualizar la lista de equipos
+      setTeams((prev) =>
+        prev.map((t) => (t._id === selectedTeamForMembers._id ? data.team : t))
+      );
+
+      alertSuccess('✅ Miembros agregados correctamente');
+      setOpenMembersModal(false);
+    } catch (error) {
+      alertError(`❌ Error: ${error.message || 'No se pudieron agregar los miembros'}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSaveTeam = async () => {
@@ -504,30 +542,26 @@ const Teams = () => {
         // Vista escritorio: Tabla
         <TableContainer component={Paper}>
           <Table>
-            <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+            <TableHead sx={{ backgroundColor: theme.palette.mode === 'dark' ? '#555' : '#f5f5f5' }}>
               <TableRow>
                 <TableCell width="5%"></TableCell>
-                <TableCell>Nombre</TableCell>
-                <TableCell>Descripción</TableCell>
-                <TableCell align="center">Miembros</TableCell>
-                <TableCell align="right">Acciones</TableCell>
+                <TableCell sx={{ color: theme.palette.text.primary }}>Nombre</TableCell>
+                <TableCell sx={{ color: theme.palette.text.primary }}>Descripción</TableCell>
+                <TableCell align="center" sx={{ color: theme.palette.text.primary }}>Miembros</TableCell>
+                <TableCell align="right" sx={{ color: theme.palette.text.primary }}>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {teams.map((team) => (
                 <TableRow key={team._id}>
                   <TableCell width="5%">
-                    {team.image && (
-                      <img
-                        src={team.image}
-                        alt="equipo"
-                        style={{ width: '35px', height: '35px', borderRadius: '6px', objectFit: 'cover' }}
-                      />
-                    )}
+                    <TeamImageModal imageUrl={team.image} teamName={team.name} />
                   </TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>{team.name}</TableCell>
                   <TableCell>{team.description || '-'}</TableCell>
-                  <TableCell align="center">{team.members?.length || 0}</TableCell>
+                  <TableCell align="center">
+                    <TeamMembersDisplay members={team.members} teamName={team.name} />
+                  </TableCell>
                   <TableCell align="right">
                     <Button
                       size="small"
@@ -575,7 +609,7 @@ const Teams = () => {
             helperText={fieldErrors.name}
             placeholder="Ej: Equipo de Desarrollo"
             sx={{ mb: 2 }}
-            inputProps={{ maxLength: 30 }}
+            inputProps={{ maxLength: 20 }}
           />
           
           {/* Upload de imagen */}
@@ -623,10 +657,10 @@ const Teams = () => {
                   textAlign: 'center',
                   cursor: 'pointer',
                   transition: 'all 0.3s',
-                  backgroundColor: '#fafafa',
+                  backgroundColor: theme.palette.mode === 'dark' ? '#333' : '#fafafa',
                   '&:hover': {
                     borderColor: '#1b8735',
-                    backgroundColor: '#f0f7f0',
+                    backgroundColor: theme.palette.mode === 'dark' ? '#2a4a2a' : '#f0f7f0',
                     borderWidth: '2px',
                   },
                 }}
@@ -662,6 +696,7 @@ const Teams = () => {
             multiline
             rows={3}
             sx={{ mb: 2 }}
+            inputProps={{ maxLength: 50 }}
           />
           <Box sx={{ p: 2,   borderRadius: 1 }}>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
@@ -680,9 +715,13 @@ const Teams = () => {
                       }));
                     }}
                     sx={{
-                      backgroundColor: '#424242ff',
+                      backgroundColor: theme.palette.mode === 'dark' ? '#424242' : '#e0e0e0',
+                      color: theme.palette.text.primary,
+                      '& .MuiChip-deleteIcon': {
+                        color: theme.palette.mode === 'dark' ? '#ff7f7f' : '#d32f2f',
+                      },
                       '&:hover': {
-                        backgroundColor: '#3a3a3aff',
+                        backgroundColor: theme.palette.mode === 'dark' ? '#3a3a3a' : '#d0d0d0',
                       },
                     }}
                   />
@@ -717,12 +756,12 @@ const Teams = () => {
       </Dialog>
 
       {/* Modal para seleccionar miembros */}
-      {openMembersModal && (
+      {openMembersModal && selectedTeamForMembers && (
         <MembersModal
           open={openMembersModal}
           onClose={() => setOpenMembersModal(false)}
           onSave={handleSaveMembers}
-          selectedMembers={formData.members}
+          selectedMembers={selectedTeamForMembers.members || []}
         />
       )}
     </Box>
