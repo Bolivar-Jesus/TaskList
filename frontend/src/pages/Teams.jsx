@@ -58,6 +58,29 @@ const Teams = () => {
     description: '',
   });
 
+  // Función para detectar si hay cambios reales en la edición
+  const hasRealChanges = () => {
+    if (!editingTeam) return true; // Crear nuevo = siempre permitir
+    
+    const nameChanged = formData.name.trim() !== editingTeam.name.trim();
+    const descriptionChanged = 
+      (formData.description || '').trim() !== (editingTeam.description || '').trim();
+    const imageChanged = formData.imagePreview !== editingTeam.image;
+    
+    // Comparar miembros: convertir a IDs para comparación consistente
+    const currentMemberIds = new Set(
+      formData.members.map((m) => (typeof m === 'string' ? m : m._id))
+    );
+    const originalMemberIds = new Set(
+      (editingTeam.members || []).map((m) => (typeof m === 'string' ? m : m._id))
+    );
+    const membersChanged =
+      currentMemberIds.size !== originalMemberIds.size ||
+      Array.from(currentMemberIds).some((id) => !originalMemberIds.has(id));
+
+    return nameChanged || descriptionChanged || imageChanged || membersChanged;
+  };
+
   // Validaciones en tiempo real
   const validateName = (value) => {
     if (!value.trim()) {
@@ -113,14 +136,17 @@ const Teams = () => {
       );
 
       if (!response.ok) {
-        throw new Error('Error al cargar los equipos');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData.error || 'Error al cargar los equipos';
+        alertError(`❌ Error: ${errorMsg}`);
+        return;
       }
 
       const data = await response.json();
       setTeams(data.teams || []);
     } catch (error) {
       console.error('Error:', error);
-      // Solo mostrar alerta si hay un error real, no si simplemente no hay equipos
+      alertError(`❌ Error: ${error.message || 'No se pudieron cargar los equipos'}`);
     } finally {
       setLoading(false);
     }
@@ -178,12 +204,18 @@ const Teams = () => {
   };
 
   const isFormValid = () => {
-    return (
+    const basicValid =
       !fieldErrors.name &&
       !fieldErrors.description &&
       formData.name.trim() !== '' &&
-      formData.members.length > 0
-    );
+      formData.members.length > 0;
+
+    // Si está editando, además debe haber cambios reales
+    if (editingTeam) {
+      return basicValid && hasRealChanges();
+    }
+
+    return basicValid;
   };
 
   const handleOpenDialog = (team = null) => {
@@ -254,6 +286,12 @@ const Teams = () => {
       return;
     }
 
+    // Si está editando, verificar si hay cambios reales
+    if (editingTeam && !hasRealChanges()) {
+      alertError('❌ No hay cambios para guardar. Modifica algún campo antes de actualizar');
+      return;
+    }
+
     setFieldErrors({ name: '', description: '' });
     setLoading(true);
     try {
@@ -319,14 +357,17 @@ const Teams = () => {
       );
 
       if (!response.ok) {
-        throw new Error('Error al eliminar el equipo');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData.error || 'Error al eliminar el equipo';
+        alertError(`❌ Error: ${errorMsg}`);
+        return;
       }
 
-      alertSuccess('Equipo eliminado correctamente');
+      alertSuccess('✅ Equipo eliminado correctamente');
       fetchTeams();
     } catch (error) {
       console.error('Error:', error);
-      alertError('Error al eliminar el equipo');
+      alertError(`❌ Error: ${error.message || 'No se pudo eliminar el equipo'}`);
     } finally {
       setLoading(false);
     }

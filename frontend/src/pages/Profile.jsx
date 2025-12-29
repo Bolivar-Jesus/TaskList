@@ -188,8 +188,10 @@ const Profile = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al actualizar el perfil');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData.error || 'Error desconocido al actualizar el perfil';
+        alertError(`❌ Error: ${errorMsg}`);
+        return;
       }
 
       const data = await response.json();
@@ -205,10 +207,10 @@ const Profile = () => {
       console.log('Usuario a actualizar:', updatedUser);
       updateUser(updatedUser);
       console.log('Usuario actualizado en contexto');
-      alertSuccess('Perfil actualizado correctamente');
+      alertSuccess('✅ Perfil actualizado correctamente');
     } catch (error) {
       console.error('Error:', error);
-      alertError(error.message || 'Error al actualizar el perfil');
+      alertError(`❌ Error: ${error.message || 'No se pudo actualizar el perfil'}`);
     } finally {
       setLoading(false);
     }
