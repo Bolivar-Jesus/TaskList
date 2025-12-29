@@ -73,7 +73,6 @@ const CreateTask = () => {
       const data = await response.json();
       setTeams(data.teams || []);
     } catch (error) {
-      console.error('Error:', error);
       alertError(`❌ Error: ${error.message || 'No se pudieron cargar los equipos'}`);
     }
   };
@@ -217,7 +216,6 @@ const CreateTask = () => {
       alertSuccess('✅ Tarea creada exitosamente');
       navigate('/tasks');
     } catch (error) {
-      console.error('Error:', error);
       alertError(`❌ Error: ${error.message || 'No se pudo crear la tarea'}`);
     } finally {
       setLoading(false);

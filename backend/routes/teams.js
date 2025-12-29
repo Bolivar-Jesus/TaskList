@@ -24,7 +24,6 @@ router.get('/', async (req, res) => {
 
     res.json({ teams });
   } catch (error) {
-    console.error('Error al obtener equipos:', error);
     res.status(500).json({ error: 'Error al obtener equipos' });
   }
 });
@@ -71,7 +70,6 @@ router.post('/', async (req, res) => {
       team: newTeam,
     });
   } catch (error) {
-    console.error('Error al crear equipo:', error);
     res.status(500).json({ error: 'Error al crear el equipo' });
   }
 });
@@ -128,7 +126,6 @@ router.put('/:teamId', async (req, res) => {
       team,
     });
   } catch (error) {
-    console.error('Error al actualizar equipo:', error);
     res.status(500).json({ error: 'Error al actualizar el equipo' });
   }
 });
@@ -153,7 +150,6 @@ router.delete('/:teamId', async (req, res) => {
 
     res.json({ message: 'Equipo eliminado exitosamente' });
   } catch (error) {
-    console.error('Error al eliminar equipo:', error);
     res.status(500).json({ error: 'Error al eliminar el equipo' });
   }
 });

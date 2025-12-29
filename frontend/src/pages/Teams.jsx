@@ -145,7 +145,6 @@ const Teams = () => {
       const data = await response.json();
       setTeams(data.teams || []);
     } catch (error) {
-      console.error('Error:', error);
       alertError(`❌ Error: ${error.message || 'No se pudieron cargar los equipos'}`);
     } finally {
       setLoading(false);
@@ -326,7 +325,6 @@ const Teams = () => {
       handleCloseDialog();
       fetchTeams();
     } catch (error) {
-      console.error('Error:', error);
       if (error.message.includes('413')) {
         alertError('❌ La imagen es demasiado grande. Máximo 5MB');
       } else if (error.message.includes('payload')) {
@@ -366,7 +364,6 @@ const Teams = () => {
       alertSuccess('✅ Equipo eliminado correctamente');
       fetchTeams();
     } catch (error) {
-      console.error('Error:', error);
       alertError(`❌ Error: ${error.message || 'No se pudo eliminar el equipo'}`);
     } finally {
       setLoading(false);

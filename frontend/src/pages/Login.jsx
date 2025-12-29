@@ -59,7 +59,6 @@ const Login = () => {
 
     const handleSuccess = async (credentialResponse) => {
         try {
-            console.log('Login Success (Google):', credentialResponse);
             const { credential } = credentialResponse;
 
             const response = await fetch(`${API_URL}/auth/google`, {
@@ -76,7 +75,6 @@ const Login = () => {
             }
 
             const data = await response.json();
-            console.log('Usuario autenticado en backend:', data);
             
             // Guardar usuario en el contexto
             login(data.user);
@@ -87,7 +85,6 @@ const Login = () => {
             // Redirigir al dashboard
             navigate('/dashboard');
         } catch (error) {
-            console.error('Error durante la autenticación:', error);
             // ALERTA DE ERROR
             alertError(
               error.message === 'Error al verificar el token en el backend'
@@ -98,7 +95,6 @@ const Login = () => {
     };
 
     const handleError = () => {
-        console.log('Login Failed');
     };
 
     return (

@@ -195,8 +195,6 @@ const Profile = () => {
       }
 
       const data = await response.json();
-      console.log('Respuesta del servidor:', data.user);
-      console.log('timeFormat en respuesta:', data.user.timeFormat);
       
       // Actualizar el usuario en el contexto y localStorage
       const updatedUser = {
@@ -204,12 +202,9 @@ const Profile = () => {
         timeFormat: data.user.timeFormat || '24h',
       };
       
-      console.log('Usuario a actualizar:', updatedUser);
       updateUser(updatedUser);
-      console.log('Usuario actualizado en contexto');
       alertSuccess('✅ Perfil actualizado correctamente');
     } catch (error) {
-      console.error('Error:', error);
       alertError(`❌ Error: ${error.message || 'No se pudo actualizar el perfil'}`);
     } finally {
       setLoading(false);

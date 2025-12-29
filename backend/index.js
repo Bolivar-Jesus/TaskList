@@ -124,7 +124,7 @@ app.post('/auth/google', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ Servidor backend escuchando en http://localhost:${PORT}`);
+  // Servidor backend escuchando
 });
 
 
