@@ -28,6 +28,26 @@ const teamSchema = new mongoose.Schema(
         required: true,
       },
     ],
+    memberRoles: [
+      {
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          required: true,
+        },
+        role: {
+          type: String,
+          enum: ['superadmin', 'admin', 'viewer'],
+          default: 'viewer',
+        },
+        // Permisos específicos para role 'admin'
+        permissions: {
+          canEditTeam: { type: Boolean, default: false }, // Editar nombre, descripción, foto
+          canAddMembers: { type: Boolean, default: false }, // Agregar/remover miembros
+          canAssignPermissions: { type: Boolean, default: false }, // Dar permisos a otros admins
+        },
+      },
+    ],
     image: {
       type: String, // URL o base64 de la imagen
       default: null,

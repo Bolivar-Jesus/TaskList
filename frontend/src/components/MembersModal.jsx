@@ -106,7 +106,7 @@ const MembersModal = ({ open, onClose, onSave, selectedMembers = [] }) => {
 
   const handleSave = () => {
     const selectedUserObjects = users.filter((u) => selectedUsers.includes(u._id || u.id));
-    onSave(selectedUserObjects.map(u => u._id || u.id));
+    onSave(selectedUserObjects);
   };
 
   const handleSelectAll = () => {
@@ -189,45 +189,70 @@ const MembersModal = ({ open, onClose, onSave, selectedMembers = [] }) => {
                 overflow: 'auto',
               }}
             >
-              {filteredUsers.map((u) => (
-                <ListItem
-                  key={u._id || u.id}
-                  onClick={() => handleSelectUser(u._id || u.id)}
-                  sx={{
-                    backgroundColor: selectedUsers.includes(u._id || u.id)
-                      ? theme.palette.mode === 'dark' ? '#1565c0' : 'rgba(21, 101, 192, 0.15)'
-                      : 'transparent',
-                    cursor: 'pointer',
-                    borderRadius: 1,
-                    mb: 0.5,
-                    '&:hover': {
-                      backgroundColor: selectedUsers.includes(u._id || u.id)
-                        ? theme.palette.mode === 'dark' ? '#0d47a1' : 'rgba(21, 101, 192, 0.25)'
-                        : 'rgba(153, 153, 153, 0.15)',
-                    },
-                  }}
-                >
-                  <Checkbox
-                    edge="start"
-                    checked={selectedUsers.includes(u._id || u.id)}
-                    tabIndex={-1}
-                    disableRipple
-                  />
-                  <ListItemAvatar>
-                    <Avatar
-                      src={u.picture && u.picture.startsWith('http') ? u.picture : ''}
-                      sx={{ width: 40, height: 40 }}
-                    >
-                      {u.name.charAt(0).toUpperCase()}
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={u.name}
-                    secondary={u.email}
-                    primaryTypographyProps={{ sx: { fontWeight: 500 } }}
-                  />
-                </ListItem>
-              ))}
+              {filteredUsers.map((u) => {
+                const isCurrentUser = user?.id === (u._id || u.id);
+                return (
+                  <ListItem
+                    key={u._id || u.id}
+                    onClick={() => !isCurrentUser && handleSelectUser(u._id || u.id)}
+                    sx={{
+                      backgroundColor: !isCurrentUser && selectedUsers.includes(u._id || u.id)
+                        ? theme.palette.mode === 'dark' ? '#1565c0' : 'rgba(21, 101, 192, 0.15)'
+                        : 'transparent',
+                      cursor: isCurrentUser ? 'default' : 'pointer',
+                      borderRadius: 1,
+                      mb: 0.5,
+                      opacity: isCurrentUser ? 0.6 : 1,
+                      '&:hover': {
+                        backgroundColor: !isCurrentUser ? (selectedUsers.includes(u._id || u.id)
+                          ? theme.palette.mode === 'dark' ? '#0d47a1' : 'rgba(21, 101, 192, 0.25)'
+                          : 'rgba(153, 153, 153, 0.15)')
+                          : 'transparent',
+                      },
+                    }}
+                  >
+                    <Checkbox
+                      edge="start"
+                      checked={selectedUsers.includes(u._id || u.id) || isCurrentUser}
+                      tabIndex={-1}
+                      disableRipple
+                      disabled={isCurrentUser}
+                    />
+                    <ListItemAvatar>
+                      <Avatar
+                        src={u.picture && u.picture.startsWith('http') ? u.picture : ''}
+                        sx={{ width: 40, height: 40 }}
+                      >
+                        {u.name.charAt(0).toUpperCase()}
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <span>{u.name}</span>
+                          {isCurrentUser && (
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: theme.palette.primary.main,
+                                fontWeight: 600,
+                                backgroundColor: theme.palette.mode === 'dark' ? '#1e3a8a' : '#dbeafe',
+                                px: 1,
+                                py: 0.25,
+                                borderRadius: 1,
+                              }}
+                            >
+                              (eres tú)
+                            </Typography>
+                          )}
+                        </Box>
+                      }
+                      secondary={u.email}
+                      primaryTypographyProps={{ sx: { fontWeight: 500 } }}
+                    />
+                  </ListItem>
+                );
+              })}
             </List>
 
             {selectedUsers.length > 0 && (

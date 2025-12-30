@@ -13,14 +13,19 @@ import {
   Typography,
   useTheme,
   Modal,
+  Select,
+  MenuItem,
+  FormControl,
 } from '@mui/material';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 
-const TeamMembersDisplay = ({ members = [], teamName = '' }) => {
+const TeamMembersDisplay = ({ members = [], teamName = '', memberRoles = [], isTeamCreator = false, teamId = null, onRolesUpdate = null }) => {
   const theme = useTheme();
   const [openMembersModal, setOpenMembersModal] = useState(false);
   const [openImageModal, setOpenImageModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [editingRoles, setEditingRoles] = useState(false);
+  const [tempRoles, setTempRoles] = useState(memberRoles);
 
   if (!members || members.length === 0) {
     return <Typography color="textSecondary">Sin miembros</Typography>;
@@ -41,12 +46,45 @@ const TeamMembersDisplay = ({ members = [], teamName = '' }) => {
     return pictureUrl;
   };
 
+  const getMemberRole = (memberId) => {
+    const roleObj = memberRoles.find(mr => mr.userId === memberId || mr.userId._id === memberId);
+    return roleObj?.role || 'viewer';
+  };
+
   const handleImageClick = (e, imageUrl) => {
     if (imageUrl) {
       e.stopPropagation();
       setSelectedImage(imageUrl);
       setOpenImageModal(true);
     }
+  };
+
+  const handleRoleChange = (memberId, newRole) => {
+    setTempRoles(tempRoles.map(mr => 
+      (mr.userId === memberId || mr.userId._id === memberId) 
+        ? { ...mr, role: newRole }
+        : mr
+    ));
+  };
+
+  const handleSaveRoles = async () => {
+    if (onRolesUpdate && teamId) {
+      const formattedRoles = tempRoles.map(mr => ({
+        userId: typeof mr.userId === 'object' ? mr.userId._id : mr.userId,
+        role: mr.role,
+      }));
+      await onRolesUpdate(teamId, formattedRoles);
+      setEditingRoles(false);
+    }
+  };
+
+  const getRoleLabel = (role) => {
+    const labels = {
+      'admin': 'Administrador',
+      'editor': 'Editor',
+      'viewer': 'Visor',
+    };
+    return labels[role] || role;
   };
 
   return (
@@ -119,13 +157,68 @@ const TeamMembersDisplay = ({ members = [], teamName = '' }) => {
           },
         }}
       >
-        <DialogTitle sx={{ color: theme.palette.text.primary }}>
-          Miembros de {teamName}
+        <DialogTitle sx={{ color: theme.palette.text.primary, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>Miembros de {teamName}</span>
+          {isTeamCreator && !editingRoles && (
+            <button
+              onClick={() => {
+                setEditingRoles(true);
+                setTempRoles(memberRoles);
+              }}
+              style={{
+                padding: '4px 12px',
+                backgroundColor: theme.palette.primary.main,
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+              }}
+            >
+              Editar roles
+            </button>
+          )}
+          {editingRoles && (
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <button
+                onClick={() => setEditingRoles(false)}
+                style={{
+                  padding: '4px 12px',
+                  backgroundColor: theme.palette.mode === 'dark' ? '#555' : '#ccc',
+                  color: theme.palette.text.primary,
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveRoles}
+                style={{
+                  padding: '4px 12px',
+                  backgroundColor: '#4caf50',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                }}
+              >
+                Guardar
+              </button>
+            </Box>
+          )}
         </DialogTitle>
         <DialogContent sx={{ backgroundColor: theme.palette.mode === 'dark' ? '#424242' : '#ffffff' }}>
           <List sx={{ pt: 0 }}>
             {members.map((member) => {
               const imageUrl = getProfileImageUrl(member.picture);
+              const currentRole = editingRoles 
+                ? tempRoles.find(mr => mr.userId === member._id || mr.userId._id === member._id)?.role || 'viewer'
+                : getMemberRole(member._id);
+              
               return (
                 <ListItem
                   key={member._id}
@@ -173,6 +266,28 @@ const TeamMembersDisplay = ({ members = [], teamName = '' }) => {
                       {member.createdAt && (
                         <Typography variant="caption" sx={{ display: 'block', color: theme.palette.text.secondary, mt: 0.5 }}>
                           Se unió: {new Date(member.createdAt).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </Typography>
+                      )}
+                      {editingRoles && (
+                        <FormControl size="small" sx={{ mt: 1, minWidth: 150 }}>
+                          <Select
+                            value={currentRole}
+                            onChange={(e) => handleRoleChange(member._id, e.target.value)}
+                            disabled={member._id === (memberRoles.find(mr => mr.role === 'admin')?.userId || memberRoles.find(mr => mr.role === 'admin')?.userId._id)}
+                            sx={{
+                              backgroundColor: theme.palette.mode === 'dark' ? '#555' : '#f5f5f5',
+                              color: theme.palette.text.primary,
+                            }}
+                          >
+                            <MenuItem value="admin">Administrador</MenuItem>
+                            <MenuItem value="editor">Editor</MenuItem>
+                            <MenuItem value="viewer">Visor</MenuItem>
+                          </Select>
+                        </FormControl>
+                      )}
+                      {!editingRoles && (
+                        <Typography variant="caption" sx={{ display: 'block', color: '#4caf50', mt: 0.5, fontWeight: 500 }}>
+                          {getRoleLabel(currentRole)}
                         </Typography>
                       )}
                     </Box>

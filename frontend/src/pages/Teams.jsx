@@ -117,7 +117,50 @@ const Teams = () => {
     } else if (name === 'description') {
       error = validateDescription(value);
     }
-    return error;
+    return error
+  };
+
+  const getCreatedByText = (team) => {
+    if (!team.createdBy) return '-';
+    const isOwnTeam = user?.id === team.createdBy._id;
+    const creatorName = isOwnTeam ? 'ti' : team.createdBy.name;
+    const createdDate = new Date(team.createdAt).toLocaleDateString('es-ES', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    return `Creado por ${creatorName} el ${createdDate}`;
+  };
+
+  const isTeamCreator = (team) => {
+    return user?.id === team.createdBy._id;
+  };
+
+  const getUserRoleInTeam = (team) => {
+    // Si no hay memberRoles, usar fallback: solo creador es admin
+    if (!team.memberRoles || team.memberRoles.length === 0) {
+      return isTeamCreator(team) ? 'admin' : null;
+    }
+    
+    const roleObj = team.memberRoles.find(mr => 
+      (typeof mr.userId === 'string' ? mr.userId : mr.userId._id) === user?.id
+    );
+    return roleObj?.role || null;
+  };
+
+  const canEditTeam = (team) => {
+    const role = getUserRoleInTeam(team);
+    return role === 'admin' || role === 'editor';
+  };
+
+  const canDeleteTeam = (team) => {
+    const role = getUserRoleInTeam(team);
+    return role === 'admin';
+  };
+
+  const canAddMembers = (team) => {
+    const role = getUserRoleInTeam(team);
+    return role === 'admin' || role === 'editor';
   };
 
   // Cargar equipos
@@ -128,7 +171,8 @@ const Teams = () => {
   const fetchTeams = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
+      // Traer equipos creados por el usuario
+      const createdResponse = await fetch(
         `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/teams`,
         {
           headers: {
@@ -137,15 +181,31 @@ const Teams = () => {
         }
       );
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.error || 'Error al cargar los equipos';
-        alertError(`❌ Error: ${errorMsg}`);
+      // Traer equipos donde el usuario es miembro
+      const memberResponse = await fetch(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/teams/member/${user?.id}`,
+        {
+          headers: {
+            'x-user-id': user?.id,
+          },
+        }
+      );
+
+      if (!createdResponse.ok && !memberResponse.ok) {
+        alertError('❌ Error al cargar los equipos');
         return;
       }
 
-      const data = await response.json();
-      setTeams(data.teams || []);
+      const createdData = createdResponse.ok ? await createdResponse.json() : { teams: [] };
+      const memberData = memberResponse.ok ? await memberResponse.json() : { teams: [] };
+
+      // Combinar ambas listas, eliminando duplicados por ID
+      const allTeams = [...createdData.teams, ...memberData.teams];
+      const uniqueTeams = Array.from(
+        new Map(allTeams.map(team => [team._id, team])).values()
+      );
+
+      setTeams(uniqueTeams);
     } catch (error) {
       alertError(`❌ Error: ${error.message || 'No se pudieron cargar los equipos'}`);
     } finally {
@@ -255,13 +315,31 @@ const Teams = () => {
     setOpenMembersModal(true);
   };
 
-  const handleSaveMembers = async (newMemberIds) => {
+  const handleSaveMembers = async (newMembers) => {
     if (!selectedTeamForMembers) return;
+
+    // Si es un equipo nuevo (sin _id), actualizar formData y NO hacer llamada al backend
+    if (!selectedTeamForMembers._id) {
+      // Asegurarse de que el usuario actual esté en la lista (como objeto completo)
+      const currentUserInList = newMembers.some(m => (m._id || m.id) === user.id);
+      const allMembers = currentUserInList ? newMembers : [{ _id: user.id, name: user.name, email: user.email, picture: user.picture }, ...newMembers];
+      
+      setFormData((prev) => ({
+        ...prev,
+        members: allMembers,
+      }));
+      setOpenMembersModal(false);
+      setSelectedTeamForMembers(null);
+      return;
+    }
 
     setLoading(true);
     try {
       const teamId = selectedTeamForMembers._id;
       const url = `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/teams/${teamId}`;
+      
+      // Extraer solo los IDs para enviar al backend
+      const memberIds = newMembers.map(m => m._id || m.id);
       
       const response = await fetch(url, {
           method: 'PUT',
@@ -273,7 +351,7 @@ const Teams = () => {
             name: selectedTeamForMembers.name,
             description: selectedTeamForMembers.description,
             image: selectedTeamForMembers.image,
-            members: newMemberIds,
+            members: memberIds,
           }),
         }
       );
@@ -408,6 +486,39 @@ const Teams = () => {
     }
   };
 
+  const handleUpdateMemberRoles = async (teamId, memberRoles) => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/teams/${teamId}/member-roles`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': user?.id,
+          },
+          body: JSON.stringify({ memberRoles }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData.error || 'Error al actualizar los roles';
+        alertError(`❌ Error: ${errorMsg}`);
+        return false;
+      }
+
+      alertSuccess('✅ Roles actualizados correctamente');
+      fetchTeams();
+      return true;
+    } catch (error) {
+      alertError(`❌ Error: ${error.message || 'No se pudo actualizar los roles'}`);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading && teams.length === 0) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
@@ -509,29 +620,35 @@ const Teams = () => {
                       />
                     )}
                   </Box>
-                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between' }}>
-                    <Button
-                      size="small"
-                      startIcon={<PersonAddIcon />}
-                      onClick={() => handleAddMembers(team)}
-                    >
-                      Miembros
-                    </Button>
-                    <Button
-                      size="small"
-                      startIcon={<EditIcon />}
-                      onClick={() => handleOpenDialog(team)}
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      size="small"
-                      color="error"
-                      startIcon={<DeleteIcon />}
-                      onClick={() => handleDeleteTeam(team._id)}
-                    >
-                      Eliminar
-                    </Button>
+                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                    {canAddMembers(team) && (
+                      <Button
+                        size="small"
+                        startIcon={<PersonAddIcon />}
+                        onClick={() => handleAddMembers(team)}
+                      >
+                        Miembros
+                      </Button>
+                    )}
+                    {canEditTeam(team) && (
+                      <Button
+                        size="small"
+                        startIcon={<EditIcon />}
+                        onClick={() => handleOpenDialog(team)}
+                      >
+                        Editar
+                      </Button>
+                    )}
+                    {canDeleteTeam(team) && (
+                      <Button
+                        size="small"
+                        color="error"
+                        startIcon={<DeleteIcon />}
+                        onClick={() => handleDeleteTeam(team._id)}
+                      >
+                        Eliminar
+                      </Button>
+                    )}
                   </Box>
                 </CardContent>
               </Card>
@@ -557,36 +674,66 @@ const Teams = () => {
                   <TableCell width="5%">
                     <TeamImageModal imageUrl={team.image} teamName={team.name} />
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{team.name}</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {team.name}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', mt: 0.5 }}>
+                        {getCreatedByText(team)}
+                      </Typography>
+                    </Box>
+                  </TableCell>
                   <TableCell>{team.description || '-'}</TableCell>
                   <TableCell align="center">
-                    <TeamMembersDisplay members={team.members} teamName={team.name} />
+                    <TeamMembersDisplay 
+                      members={team.members} 
+                      teamName={team.name}
+                      memberRoles={team.memberRoles || []}
+                      isTeamCreator={isTeamCreator(team)}
+                      teamId={team._id}
+                      onRolesUpdate={handleUpdateMemberRoles}
+                    />
                   </TableCell>
                   <TableCell align="right">
-                    <Button
-                      size="small"
-                      startIcon={<PersonAddIcon />}
-                      onClick={() => handleAddMembers(team)}
-                      sx={{ mr: 1 }}
-                    >
-                      Miembros
-                    </Button>
-                    <Button
-                      size="small"
-                      startIcon={<EditIcon />}
-                      onClick={() => handleOpenDialog(team)}
-                      sx={{ mr: 1 }}
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      size="small"
-                      color="error"
-                      startIcon={<DeleteIcon />}
-                      onClick={() => handleDeleteTeam(team._id)}
-                    >
-                      Eliminar
-                    </Button>
+                    {canEditTeam(team) || canDeleteTeam(team) ? (
+                      <>
+                        {canAddMembers(team) && (
+                          <Button
+                            size="small"
+                            startIcon={<PersonAddIcon />}
+                            onClick={() => handleAddMembers(team)}
+                            sx={{ mr: 1 }}
+                          >
+                            Miembros
+                          </Button>
+                        )}
+                        {canEditTeam(team) && (
+                          <Button
+                            size="small"
+                            startIcon={<EditIcon />}
+                            onClick={() => handleOpenDialog(team)}
+                            sx={{ mr: 1 }}
+                          >
+                            Editar
+                          </Button>
+                        )}
+                        {canDeleteTeam(team) && (
+                          <Button
+                            size="small"
+                            color="error"
+                            startIcon={<DeleteIcon />}
+                            onClick={() => handleDeleteTeam(team._id)}
+                          >
+                            Eliminar
+                          </Button>
+                        )}
+                      </>
+                    ) : (
+                      <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                        Solo puedes ver este equipo
+                      </Typography>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -667,10 +814,10 @@ const Teams = () => {
               >
                 <CloudUploadIcon sx={{ fontSize: 48, color: '#1b8735' }} />
                 <Box>
-                  <Typography variant="body2" sx={{ fontWeight: 500, color: '#333', mb: 0.5 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 500, color: theme.palette.text.primary, mb: 0.5 }}>
                     Haz clic o arrastra una imagen
                   </Typography>
-                  <Typography variant="caption" sx={{ color: '#999', display: 'block' }}>
+                  <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block' }}>
                     JPG, PNG, GIF - Máximo 5MB
                   </Typography>
                 </Box>
@@ -704,28 +851,35 @@ const Teams = () => {
             </Typography>
             {formData.members.length > 0 ? (
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {formData.members.map((member) => (
-                  <Chip
-                    key={member._id}
-                    label={member.name}
-                    onDelete={() => {
-                      setFormData((prev) => ({
-                        ...prev,
-                        members: prev.members.filter((m) => m._id !== member._id),
-                      }));
-                    }}
-                    sx={{
-                      backgroundColor: theme.palette.mode === 'dark' ? '#424242' : '#e0e0e0',
-                      color: theme.palette.text.primary,
-                      '& .MuiChip-deleteIcon': {
-                        color: theme.palette.mode === 'dark' ? '#ff7f7f' : '#d32f2f',
-                      },
-                      '&:hover': {
-                        backgroundColor: theme.palette.mode === 'dark' ? '#3a3a3a' : '#d0d0d0',
-                      },
-                    }}
-                  />
-                ))}
+                {formData.members.map((member, index) => {
+                  const memberId = typeof member === 'string' ? member : (member._id || member.id);
+                  const memberName = typeof member === 'string' ? `Miembro ${index + 1}` : member.name;
+                  return (
+                    <Chip
+                      key={memberId || index}
+                      label={memberName}
+                      onDelete={() => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          members: prev.members.filter((m) => {
+                            const currentId = typeof m === 'string' ? m : (m._id || m.id);
+                            return currentId !== memberId;
+                          }),
+                        }));
+                      }}
+                      sx={{
+                        backgroundColor: theme.palette.mode === 'dark' ? '#424242' : '#e0e0e0',
+                        color: theme.palette.text.primary,
+                        '& .MuiChip-deleteIcon': {
+                          color: theme.palette.mode === 'dark' ? '#ff7f7f' : '#d32f2f',
+                        },
+                        '&:hover': {
+                          backgroundColor: theme.palette.mode === 'dark' ? '#3a3a3a' : '#d0d0d0',
+                        },
+                      }}
+                    />
+                  );
+                })}
               </Box>
             ) : (
               <Typography variant="caption" color="error">
@@ -737,7 +891,10 @@ const Teams = () => {
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={handleCloseDialog}>Cancelar</Button>
           <Button
-            onClick={() => setOpenMembersModal(true)}
+            onClick={() => {
+              setSelectedTeamForMembers(formData);
+              setOpenMembersModal(true);
+            }}
             variant="outlined"
             color="primary"
             startIcon={<PersonAddIcon />}
