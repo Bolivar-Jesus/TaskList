@@ -28,6 +28,7 @@ router.get('/', async (req, res) => {
     const teamsWithFullMembers = teams.map(team => {
       return {
         ...team.toObject(),
+        createdBy: team.createdBy, // Incluir información del creador
         members: team.members.map(member => {
           if (typeof member === 'object' && member._id) {
             return {
@@ -47,6 +48,51 @@ router.get('/', async (req, res) => {
     res.json({ teams: teamsWithFullMembers });
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener equipos' });
+  }
+});
+
+// GET equipos donde el usuario es miembro
+router.get('/member/:userId', async (req, res) => {
+  try {
+    const currentUserId = req.headers['x-user-id'];
+    const { userId } = req.params;
+
+    if (!currentUserId) {
+      return res.status(400).json({ error: 'Se requiere el header x-user-id' });
+    }
+
+    // Buscar equipos donde el usuario es miembro
+    const teams = await Team.find({ members: userId })
+      .populate({
+        path: 'members',
+      })
+      .populate('createdBy', 'name email picture')
+      .sort({ createdAt: -1 });
+
+    // Asegurar que todos los campos estén presentes
+    const teamsWithFullMembers = teams.map(team => {
+      return {
+        ...team.toObject(),
+        createdBy: team.createdBy,
+        members: team.members.map(member => {
+          if (typeof member === 'object' && member._id) {
+            return {
+              _id: member._id,
+              name: member.name,
+              email: member.email,
+              picture: member.picture,
+              phone: member.phone || null,
+              createdAt: member.createdAt,
+            };
+          }
+          return member;
+        })
+      };
+    });
+
+    res.json({ teams: teamsWithFullMembers });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener equipos del miembro' });
   }
 });
 
@@ -75,11 +121,23 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Uno o más miembros no existen' });
     }
 
+    // Crear roles: superadmin para el creador, viewer para otros miembros
+    const memberRoles = members.map(memberId => ({
+      userId: memberId,
+      role: memberId === userId ? 'superadmin' : 'viewer',
+      permissions: {
+        canEditTeam: false,
+        canAddMembers: false,
+        canAssignPermissions: false,
+      },
+    }));
+
     const newTeam = new Team({
       name: name.trim(),
       description: description ? description.trim() : null,
       image: image || null,
       members,
+      memberRoles,
       createdBy: userId,
     });
 
@@ -110,6 +168,55 @@ router.post('/', async (req, res) => {
   }
 });
 
+// PUT actualizar roles y permisos de miembros (solo el superadmin puede)
+router.put('/:teamId/member-roles', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const { teamId } = req.params;
+    const { memberRoles } = req.body;
+
+    // Verificar que el equipo existe
+    const team = await Team.findById(teamId);
+    if (!team) {
+      return res.status(404).json({ error: 'Equipo no encontrado' });
+    }
+
+    // Solo el superadmin (creador) puede cambiar los roles
+    if (team.createdBy.toString() !== userId) {
+      return res.status(403).json({ error: 'Solo el superadministrador del equipo puede cambiar los roles' });
+    }
+
+    // Validar que el creador siempre tenga rol 'superadmin'
+    const creatorRoleValid = memberRoles.some(
+      mr => mr.userId.toString() === userId && mr.role === 'superadmin'
+    );
+    if (!creatorRoleValid) {
+      return res.status(400).json({ error: 'El creador debe mantener el rol de superadministrador' });
+    }
+
+    // Validar que admins tengan al menos un permiso
+    for (const mr of memberRoles) {
+      if (mr.role === 'admin') {
+        const hasPermission = mr.permissions?.canEditTeam || mr.permissions?.canAddMembers || mr.permissions?.canAssignPermissions;
+        if (!hasPermission) {
+          return res.status(400).json({ error: 'Los admins deben tener al menos un permiso' });
+        }
+      }
+    }
+
+    // Actualizar los roles
+    team.memberRoles = memberRoles;
+    await team.save();
+
+    res.json({
+      message: 'Roles y permisos actualizados exitosamente',
+      memberRoles: team.memberRoles,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al actualizar los roles' });
+  }
+});
+
 // PUT actualizar equipo
 router.put('/:teamId', async (req, res) => {
   try {
@@ -117,13 +224,28 @@ router.put('/:teamId', async (req, res) => {
     const { teamId } = req.params;
     const { name, description, image, members } = req.body;
 
-    // Verificar que el equipo existe y pertenece al usuario
+    // Verificar que el equipo existe
     const team = await Team.findById(teamId);
     if (!team) {
       return res.status(404).json({ error: 'Equipo no encontrado' });
     }
 
-    if (team.createdBy.toString() !== userId) {
+    // Verificar el rol del usuario en el equipo
+    let userRole = null;
+    
+    // Si memberRoles existe, obtener rol de ahí
+    if (team.memberRoles && team.memberRoles.length > 0) {
+      const userMemberRole = team.memberRoles.find(mr => mr.userId.toString() === userId);
+      userRole = userMemberRole?.role;
+    } else {
+      // Fallback: si no hay memberRoles, solo el creador es admin
+      if (team.createdBy.toString() === userId) {
+        userRole = 'admin';
+      }
+    }
+
+    // Solo admin y editor pueden editar
+    if (!userRole || !['admin', 'editor'].includes(userRole)) {
       return res.status(403).json({ error: 'No tienes permiso para editar este equipo' });
     }
 
@@ -146,7 +268,26 @@ router.put('/:teamId', async (req, res) => {
       if (validMembers.length !== members.length) {
         return res.status(400).json({ error: 'Uno o más miembros no existen' });
       }
+
+      // Actualizar miembros y sus roles
+      const currentMemberIds = team.members.map(m => m.toString());
+      const newMembers = members.filter(m => !currentMemberIds.includes(m.toString()));
+
       team.members = members;
+
+      // Mantener roles existentes y agregar 'viewer' a nuevos miembros
+      const newMemberRoles = team.memberRoles.filter(mr =>
+        members.some(m => m.toString() === mr.userId.toString())
+      );
+
+      newMembers.forEach(memberId => {
+        newMemberRoles.push({
+          userId: memberId,
+          role: 'viewer',
+        });
+      });
+
+      team.memberRoles = newMemberRoles;
     }
 
     if (name) team.name = name.trim();
@@ -186,14 +327,28 @@ router.delete('/:teamId', async (req, res) => {
     const userId = req.headers['x-user-id'];
     const { teamId } = req.params;
 
-    // Verificar que el equipo existe y pertenece al usuario
+    // Verificar que el equipo existe
     const team = await Team.findById(teamId);
     if (!team) {
       return res.status(404).json({ error: 'Equipo no encontrado' });
     }
 
-    if (team.createdBy.toString() !== userId) {
-      return res.status(403).json({ error: 'No tienes permiso para eliminar este equipo' });
+    // Solo el admin puede eliminar
+    let userRole = null;
+    
+    // Si memberRoles existe, obtener rol de ahí
+    if (team.memberRoles && team.memberRoles.length > 0) {
+      const userMemberRole = team.memberRoles.find(mr => mr.userId.toString() === userId);
+      userRole = userMemberRole?.role;
+    } else {
+      // Fallback: si no hay memberRoles, solo el creador es admin
+      if (team.createdBy.toString() === userId) {
+        userRole = 'admin';
+      }
+    }
+
+    if (userRole !== 'admin') {
+      return res.status(403).json({ error: 'Solo el administrador del equipo puede eliminarlo' });
     }
 
     await Team.findByIdAndDelete(teamId);
