@@ -124,7 +124,7 @@ router.post('/', async (req, res) => {
     // Crear roles: superadmin para el creador, viewer para otros miembros
     const memberRoles = members.map(memberId => ({
       userId: memberId,
-      role: memberId === userId ? 'superadmin' : 'viewer',
+      role: memberId.toString() === userId ? 'superadmin' : 'viewer',
       permissions: {
         canEditTeam: false,
         canAddMembers: false,
@@ -230,23 +230,40 @@ router.put('/:teamId', async (req, res) => {
       return res.status(404).json({ error: 'Equipo no encontrado' });
     }
 
-    // Verificar el rol del usuario en el equipo
-    let userRole = null;
+    // Verificar el rol del usuario en el equipo y sus permisos
+    let canEditTeam = false;
+    let canAddMembers = false;
     
-    // Si memberRoles existe, obtener rol de ahí
+    // Si memberRoles existe, obtener permisos de ahí
     if (team.memberRoles && team.memberRoles.length > 0) {
       const userMemberRole = team.memberRoles.find(mr => mr.userId.toString() === userId);
-      userRole = userMemberRole?.role;
+      
+      if (userMemberRole?.role === 'superadmin') {
+        canEditTeam = true;
+        canAddMembers = true;
+      } else if (userMemberRole?.role === 'admin') {
+        canEditTeam = userMemberRole?.permissions?.canEditTeam || false;
+        canAddMembers = userMemberRole?.permissions?.canAddMembers || false;
+      }
     } else {
-      // Fallback: si no hay memberRoles, solo el creador es admin
+      // Fallback: si no hay memberRoles, solo el creador puede hacer todo
       if (team.createdBy.toString() === userId) {
-        userRole = 'admin';
+        canEditTeam = true;
+        canAddMembers = true;
       }
     }
 
-    // Solo admin y editor pueden editar
-    if (!userRole || !['admin', 'editor'].includes(userRole)) {
-      return res.status(403).json({ error: 'No tienes permiso para editar este equipo' });
+    // Validar permisos según qué se está intentando hacer
+    if (name || description || image) {
+      if (!canEditTeam) {
+        return res.status(403).json({ error: 'No tienes permiso para editar el equipo' });
+      }
+    }
+
+    if (members) {
+      if (!canAddMembers) {
+        return res.status(403).json({ error: 'No tienes permiso para agregar miembros' });
+      }
     }
 
     // Validaciones
@@ -333,7 +350,7 @@ router.delete('/:teamId', async (req, res) => {
       return res.status(404).json({ error: 'Equipo no encontrado' });
     }
 
-    // Solo el admin puede eliminar
+    // Solo el superadmin puede eliminar
     let userRole = null;
     
     // Si memberRoles existe, obtener rol de ahí
@@ -341,14 +358,14 @@ router.delete('/:teamId', async (req, res) => {
       const userMemberRole = team.memberRoles.find(mr => mr.userId.toString() === userId);
       userRole = userMemberRole?.role;
     } else {
-      // Fallback: si no hay memberRoles, solo el creador es admin
+      // Fallback: si no hay memberRoles, solo el creador es superadmin
       if (team.createdBy.toString() === userId) {
-        userRole = 'admin';
+        userRole = 'superadmin';
       }
     }
 
-    if (userRole !== 'admin') {
-      return res.status(403).json({ error: 'Solo el administrador del equipo puede eliminarlo' });
+    if (userRole !== 'superadmin') {
+      return res.status(403).json({ error: 'Solo el superadministrador del equipo puede eliminarlo' });
     }
 
     await Team.findByIdAndDelete(teamId);

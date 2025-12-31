@@ -22,7 +22,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import { useAuth } from '../context/AuthContext';
 import { alertError } from '../utils/alert';
 
-const MembersModal = ({ open, onClose, onSave, selectedMembers = [] }) => {
+const MembersModal = ({ open, onClose, onSave, selectedMembers = [], currentMembers = [], canRemoveMembers = true }) => {
   const { user } = useAuth();
   const theme = useTheme();
   const [users, setUsers] = useState([]);
