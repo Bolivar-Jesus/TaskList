@@ -30,7 +30,7 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CloseIcon from '@mui/icons-material/Close';
 import { useAuth } from '../context/AuthContext';
-import { alertSuccess, alertError } from '../utils/alert';
+import { alertSuccess, alertError, showSimpleAlert } from '../utils/alert';
 import MembersModal from '../components/MembersModal';
 import TeamMembersDisplay from '../components/TeamMembersDisplay';
 import TeamImageModal from '../components/TeamImageModal';
@@ -137,9 +137,9 @@ const Teams = () => {
   };
 
   const getUserRoleInTeam = (team) => {
-    // Si no hay memberRoles, usar fallback: solo creador es admin
+    // Si no hay memberRoles, usar fallback: solo creador es superadmin
     if (!team.memberRoles || team.memberRoles.length === 0) {
-      return isTeamCreator(team) ? 'admin' : null;
+      return isTeamCreator(team) ? 'superadmin' : null;
     }
     
     const roleObj = team.memberRoles.find(mr => 
@@ -148,19 +148,67 @@ const Teams = () => {
     return roleObj?.role || null;
   };
 
+  const getUserPermissionsInTeam = (team) => {
+    if (!team.memberRoles || team.memberRoles.length === 0) {
+      return isTeamCreator(team) ? {
+        canEditTeam: true,
+        canAddMembers: true,
+        canAssignPermissions: true,
+        canDeleteTeam: true,
+      } : {
+        canEditTeam: false,
+        canAddMembers: false,
+        canAssignPermissions: false,
+        canDeleteTeam: false,
+      };
+    }
+    
+    const roleObj = team.memberRoles.find(mr => 
+      (typeof mr.userId === 'string' ? mr.userId : mr.userId._id) === user?.id
+    );
+
+    if (roleObj?.role === 'superadmin') {
+      return {
+        canEditTeam: true,
+        canAddMembers: true,
+        canAssignPermissions: true,
+        canDeleteTeam: true,
+      };
+    } else if (roleObj?.role === 'admin') {
+      return {
+        canEditTeam: roleObj?.permissions?.canEditTeam || false,
+        canAddMembers: roleObj?.permissions?.canAddMembers || false,
+        canAssignPermissions: roleObj?.permissions?.canAssignPermissions || false,
+        canDeleteTeam: false,
+      };
+    } else {
+      return {
+        canEditTeam: false,
+        canAddMembers: false,
+        canAssignPermissions: false,
+        canDeleteTeam: false,
+      };
+    }
+  };
+
   const canEditTeam = (team) => {
-    const role = getUserRoleInTeam(team);
-    return role === 'admin' || role === 'editor';
+    const perms = getUserPermissionsInTeam(team);
+    return perms.canEditTeam;
   };
 
   const canDeleteTeam = (team) => {
-    const role = getUserRoleInTeam(team);
-    return role === 'admin';
+    const perms = getUserPermissionsInTeam(team);
+    return perms.canDeleteTeam;
   };
 
   const canAddMembers = (team) => {
-    const role = getUserRoleInTeam(team);
-    return role === 'admin' || role === 'editor';
+    const perms = getUserPermissionsInTeam(team);
+    return perms.canAddMembers;
+  };
+
+  const canAssignPermissions = (team) => {
+    const perms = getUserPermissionsInTeam(team);
+    return perms.canAssignPermissions;
   };
 
   // Cargar equipos
@@ -504,15 +552,15 @@ const Teams = () => {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMsg = errorData.error || 'Error al actualizar los roles';
-        alertError(`❌ Error: ${errorMsg}`);
+        showSimpleAlert(`❌ Error: ${errorMsg}`, 'error', 2300);
         return false;
       }
 
-      alertSuccess('✅ Roles actualizados correctamente');
-      fetchTeams();
+      // Actualiza los datos sin mostrar alerta aquí
+      await fetchTeams();
       return true;
     } catch (error) {
-      alertError(`❌ Error: ${error.message || 'No se pudo actualizar los roles'}`);
+      showSimpleAlert(`❌ Error: ${error.message || 'No se pudo actualizar los roles'}`, 'error', 2300);
       return false;
     } finally {
       setLoading(false);
@@ -690,9 +738,13 @@ const Teams = () => {
                       members={team.members} 
                       teamName={team.name}
                       memberRoles={team.memberRoles || []}
-                      isTeamCreator={isTeamCreator(team)}
+                      createdById={team.createdBy?._id || team.createdBy}
+                      isSuperAdmin={getUserRoleInTeam(team) === 'superadmin'}
+                      canAssignPermissions={canAssignPermissions(team)}
                       teamId={team._id}
                       onRolesUpdate={handleUpdateMemberRoles}
+                      onAlert={alertSuccess}
+                      onError={alertError}
                     />
                   </TableCell>
                   <TableCell align="right">
@@ -850,36 +902,54 @@ const Teams = () => {
               Miembros Seleccionados: {formData.members.length}
             </Typography>
             {formData.members.length > 0 ? (
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {formData.members.map((member, index) => {
-                  const memberId = typeof member === 'string' ? member : (member._id || member.id);
-                  const memberName = typeof member === 'string' ? `Miembro ${index + 1}` : member.name;
-                  return (
-                    <Chip
-                      key={memberId || index}
-                      label={memberName}
-                      onDelete={() => {
-                        setFormData((prev) => ({
-                          ...prev,
-                          members: prev.members.filter((m) => {
-                            const currentId = typeof m === 'string' ? m : (m._id || m.id);
-                            return currentId !== memberId;
-                          }),
-                        }));
-                      }}
-                      sx={{
-                        backgroundColor: theme.palette.mode === 'dark' ? '#424242' : '#e0e0e0',
-                        color: theme.palette.text.primary,
-                        '& .MuiChip-deleteIcon': {
-                          color: theme.palette.mode === 'dark' ? '#ff7f7f' : '#d32f2f',
-                        },
-                        '&:hover': {
-                          backgroundColor: theme.palette.mode === 'dark' ? '#3a3a3a' : '#d0d0d0',
-                        },
-                      }}
-                    />
-                  );
-                })}
+              <Box>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
+                  {formData.members.map((member, index) => {
+                    const memberId = typeof member === 'string' ? member : (member._id || member.id);
+                    const memberName = typeof member === 'string' ? `Miembro ${index + 1}` : member.name;
+                    // Si estamos editando un equipo existente, verificar si tiene permiso canAddMembers
+                    const canDeleteMember = !editingTeam || canAddMembers(editingTeam);
+                    
+                    return (
+                      <Chip
+                        key={memberId || index}
+                        label={memberName}
+                        onDelete={canDeleteMember ? () => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            members: prev.members.filter((m) => {
+                              const currentId = typeof m === 'string' ? m : (m._id || m.id);
+                              return currentId !== memberId;
+                            }),
+                          }));
+                        } : undefined}
+                        disabled={!canDeleteMember}
+                        sx={{
+                          backgroundColor: canDeleteMember 
+                            ? (theme.palette.mode === 'dark' ? '#424242' : '#e0e0e0')
+                            : (theme.palette.mode === 'dark' ? '#5a3a3a' : '#ffebee'),
+                          color: theme.palette.text.primary,
+                          opacity: canDeleteMember ? 1 : 0.6,
+                          '& .MuiChip-deleteIcon': {
+                            color: theme.palette.mode === 'dark' ? '#ff7f7f' : '#d32f2f',
+                            cursor: canDeleteMember ? 'pointer' : 'not-allowed',
+                          },
+                          '&:hover': {
+                            backgroundColor: canDeleteMember
+                              ? (theme.palette.mode === 'dark' ? '#3a3a3a' : '#d0d0d0')
+                              : (theme.palette.mode === 'dark' ? '#5a3a3a' : '#ffebee'),
+                          },
+                        }}
+                        title={!canDeleteMember ? 'No tienes permiso para eliminar miembros' : ''}
+                      />
+                    );
+                  })}
+                </Box>
+                {editingTeam && !canAddMembers(editingTeam) && (
+                  <Typography variant="caption" sx={{ color: theme.palette.mode === 'dark' ? '#ff9999' : '#d32f2f', display: 'block', mt: 0.5 }}>
+                    ℹ️ No tienes permiso para eliminar miembros
+                  </Typography>
+                )}
               </Box>
             ) : (
               <Typography variant="caption" color="error">
@@ -919,6 +989,8 @@ const Teams = () => {
           onClose={() => setOpenMembersModal(false)}
           onSave={handleSaveMembers}
           selectedMembers={selectedTeamForMembers.members || []}
+          currentMembers={selectedTeamForMembers.members || []}
+          canRemoveMembers={canAddMembers(selectedTeamForMembers)}
         />
       )}
     </Box>
