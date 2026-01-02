@@ -12,16 +12,17 @@ import {
   ListItemAvatar,
   Typography,
   useTheme,
-  Modal,
   Select,
   MenuItem,
   FormControl,
   CircularProgress,
 } from '@mui/material';
+import MemberImageModal from './MemberImageModal';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
-import { showSimpleAlert } from '../utils/alert';
+import { useAlertAdapter } from '../utils/alertProviderAdapter';
 
-const TeamMembersDisplay = ({ members = [], teamName = '', memberRoles = [], createdById = null, isSuperAdmin = false, canAssignPermissions = false, teamId = null, currentUserId = null, onRolesUpdate = null, onAlert = null, onError = null }) => {
+const TeamMembersDisplay = ({ members = [], teamName = '', memberRoles = [], createdById = null, isSuperAdmin = false, canAssignPermissions = false, teamId = null, currentUserId = null, onRolesUpdate = null }) => {
+  const { alertSuccess, alertError } = useAlertAdapter();
   const theme = useTheme();
   const [openMembersModal, setOpenMembersModal] = useState(false);
   const [openImageModal, setOpenImageModal] = useState(false);
@@ -114,19 +115,14 @@ const TeamMembersDisplay = ({ members = [], teamName = '', memberRoles = [], cre
           permissions: mr.permissions || { canEditTeam: false, canAddMembers: false, canAssignPermissions: false },
         }));
         const success = await onRolesUpdate(teamId, formattedRoles);
-        // Solo cierra el modal si la actualización fue exitosa
         if (success) {
-          // Cierra el modal primero
           setEditingRoles(false);
-          // Luego muestra la alerta
           setTimeout(() => {
-            showSimpleAlert('✅ Roles y permisos actualizados correctamente', 'success', 2300);
+            alertSuccess('✅ Roles y permisos actualizados correctamente');
           }, 100);
         }
       } catch (error) {
-        if (onError) {
-          await onError(`❌ Error: ${error.message || 'No se pudo actualizar los roles'}`);
-        }
+        alertError(`❌ Error: ${error.message || 'No se pudo actualizar los roles'}`);
       } finally {
         setIsLoading(false);
       }
@@ -163,19 +159,21 @@ const TeamMembersDisplay = ({ members = [], teamName = '', memberRoles = [], cre
           {displayMembers.map((member) => {
             const imageUrl = getProfileImageUrl(member.picture);
             return (
-              <Avatar
-                key={member._id}
-                src={imageUrl}
-                alt={member.name}
-                onClick={(e) => handleImageClick(e, imageUrl)}
-                sx={{
-                  bgcolor: imageUrl ? 'transparent' : '#1b8735',
-                  color: '#ffffff',
-                  fontWeight: 600,
-                }}
-              >
-                {!imageUrl && member.name?.charAt(0).toUpperCase()}
-              </Avatar>
+              <MemberImageModal key={member._id} imageUrl={imageUrl} alt={member.name} avatarSize={32}>
+                <Avatar
+                  src={imageUrl}
+                  alt={member.name}
+                  sx={{
+                    bgcolor: imageUrl ? 'transparent' : '#1b8735',
+                    color: '#ffffff',
+                    fontWeight: 600,
+                    width: 32,
+                    height: 32,
+                  }}
+                >
+                  {!imageUrl && member.name?.charAt(0).toUpperCase()}
+                </Avatar>
+              </MemberImageModal>
             );
           })}
         </AvatarGroup>
@@ -347,24 +345,25 @@ const TeamMembersDisplay = ({ members = [], teamName = '', memberRoles = [], cre
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'flex-start', width: '100%', mb: 1 }}>
-                    <ListItemAvatar sx={{ minWidth: 'auto', mr: 2 }}>
-                      <Avatar
-                        src={imageUrl}
-                        alt={member.name}
-                        onClick={(e) => handleImageClick(e, imageUrl)}
-                        sx={{
-                          width: 48,
-                          height: 48,
-                          bgcolor: imageUrl ? 'transparent' : '#1b8735',
-                          color: '#ffffff',
-                          fontWeight: 600,
-                          cursor: imageUrl ? 'pointer' : 'default',
-                          '&:hover': imageUrl ? { opacity: 0.8 } : {},
-                        }}
-                      >
-                        {!imageUrl && member.name?.charAt(0).toUpperCase()}
-                      </Avatar>
-                    </ListItemAvatar>
+                        <ListItemAvatar sx={{ minWidth: 'auto', mr: 2 }}>
+                          <MemberImageModal imageUrl={imageUrl} alt={member.name} avatarSize={48}>
+                            <Avatar
+                              src={imageUrl}
+                              alt={member.name}
+                              sx={{
+                                width: 48,
+                                height: 48,
+                                bgcolor: imageUrl ? 'transparent' : '#1b8735',
+                                color: '#ffffff',
+                                fontWeight: 600,
+                                cursor: imageUrl ? 'pointer' : 'default',
+                                '&:hover': imageUrl ? { opacity: 0.8 } : {},
+                              }}
+                            >
+                              {!imageUrl && member.name?.charAt(0).toUpperCase()}
+                            </Avatar>
+                          </MemberImageModal>
+                        </ListItemAvatar>
                     <Box sx={{ ml: 1, flex: 1 }}>
                       <Typography sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.5 }}>
                         {member.name} {isSuperadmin && <span style={{ color: theme.palette.primary.main, fontSize: '0.85em' }}>(superadmin)</span>}{isCurrentUser && <span style={{ color: theme.palette.mode === 'dark' ? '#ffb74d' : '#f57c00', fontSize: '0.85em', marginLeft: '4px' }}>(eres tú)</span>}
@@ -497,69 +496,6 @@ const TeamMembersDisplay = ({ members = [], teamName = '', memberRoles = [], cre
         </DialogContent>
       </Dialog>
 
-      {/* Modal de imagen ampliada */}
-      <Modal
-        open={openImageModal}
-        onClose={() => setOpenImageModal(false)}
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: 'rgba(0, 0, 0, 0.8)',
-        }}
-      >
-        <Box
-          sx={{
-            maxWidth: '90vw',
-            maxHeight: '90vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            position: 'relative',
-          }}
-        >
-          {selectedImage ? (
-            <img
-              src={selectedImage}
-              alt="Ampliada"
-              style={{
-                maxWidth: '90vw',
-                maxHeight: '90vh',
-                objectFit: 'contain',
-                borderRadius: '8px',
-              }}
-            />
-          ) : (
-            <Avatar
-              sx={{
-                width: 200,
-                height: 200,
-                bgcolor: '#1b8735',
-                fontSize: '4rem',
-                fontWeight: 600,
-                color: '#ffffff',
-              }}
-            >
-              ?
-            </Avatar>
-          )}
-          <IconButton
-            onClick={() => setOpenImageModal(false)}
-            sx={{
-              position: 'absolute',
-              top: 10,
-              right: 10,
-              bgcolor: 'rgba(0, 0, 0, 0.5)',
-              color: '#ffffff',
-              '&:hover': {
-                bgcolor: 'rgba(0, 0, 0, 0.8)',
-              },
-            }}
-          >
-            <ZoomOutIcon />
-          </IconButton>
-        </Box>
-      </Modal>
     </>
   );
 };

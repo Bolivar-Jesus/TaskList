@@ -22,6 +22,8 @@ import {
   Grid,
   useMediaQuery,
   useTheme,
+  IconButton,
+  Pagination,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -30,22 +32,30 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CloseIcon from '@mui/icons-material/Close';
 import { useAuth } from '../context/AuthContext';
-import { alertSuccess, alertError, showSimpleAlert } from '../utils/alert';
+import { useAlertAdapter } from '../utils/alertProviderAdapter';
 import MembersModal from '../components/MembersModal';
 import TeamMembersDisplay from '../components/TeamMembersDisplay';
 import TeamImageModal from '../components/TeamImageModal';
+import NoTeamImageIcon from '../components/NoTeamImageIcon';
 
 const Teams = () => {
+  const { alertSuccess, alertError } = useAlertAdapter();
   const { user } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [updatingTeamId, setUpdatingTeamId] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [openMembersModal, setOpenMembersModal] = useState(false);
   const [editingTeam, setEditingTeam] = useState(null);
   const [selectedTeamForMembers, setSelectedTeamForMembers] = useState(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [teamToDelete, setTeamToDelete] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   const [formData, setFormData] = useState({
     name: '',
@@ -100,6 +110,9 @@ const Teams = () => {
   const validateDescription = (value) => {
     if (!value.trim()) {
       return ''; // Es opcional
+    }
+    if (value.trim().toLowerCase() === 'equipo sin descripción') {
+      return 'No puedes usar "Equipo sin descripción" como descripción';
     }
     if (value.length < 5) {
       return 'La descripción debe tener al menos 5 caracteres';
@@ -254,11 +267,32 @@ const Teams = () => {
       );
 
       setTeams(uniqueTeams);
+      setCurrentPage(1); // Resetear a página 1 cuando se cargan equipos
     } catch (error) {
       alertError(`❌ Error: ${error.message || 'No se pudieron cargar los equipos'}`);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Función para filtrar equipos por búsqueda
+  const filteredTeams = teams.filter((team) => {
+    const query = searchQuery.toLowerCase();
+    const matchesName = team.name.toLowerCase().includes(query);
+    const matchesDescription = (team.description || '').toLowerCase().includes(query);
+    const matchesMembers = team.members?.some((m) => m.name?.toLowerCase().includes(query) || m.email?.toLowerCase().includes(query));
+    return matchesName || matchesDescription || matchesMembers;
+  });
+
+  // Paginación
+  const totalPages = Math.ceil(filteredTeams.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedTeams = filteredTeams.slice(startIndex, startIndex + itemsPerPage);
+
+  // Resetear a página 1 cuando cambia la búsqueda
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1);
   };
 
   const handleInputChange = (e) => {
@@ -434,6 +468,20 @@ const Teams = () => {
       return;
     }
 
+    // Validar nombre duplicado (case-insensitive)
+    const nameLower = formData.name.toLowerCase().trim();
+    const isDuplicate = teams.some((t) => {
+      // Si estamos editando, excluir el equipo actual del análisis
+      if (editingTeam && t._id === editingTeam._id) return false;
+      return t.name.toLowerCase().trim() === nameLower;
+    });
+    
+    if (isDuplicate) {
+      setFieldErrors({ name: 'Nombre ya en uso', description: '' });
+      alertError('❌ El nombre del equipo ya está en uso. Por favor, elige otro nombre.');
+      return;
+    }
+
     // Validar descripción
     const descriptionError = validateDescription(formData.description);
     if (descriptionError) {
@@ -457,6 +505,9 @@ const Teams = () => {
 
     setFieldErrors({ name: '', description: '' });
     setLoading(true);
+    if (editingTeam) {
+      setUpdatingTeamId(editingTeam._id);
+    }
     try {
       const url = editingTeam
         ? `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/teams/${editingTeam._id}`
@@ -485,9 +536,19 @@ const Teams = () => {
         return;
       }
 
+      const data = await response.json();
+      // Actualizar estado local inmediatamente si es edición
+      if (editingTeam && data.team) {
+        setTeams((prev) =>
+          prev.map((t) => (t._id === editingTeam._id ? data.team : t))
+        );
+      } else {
+        // Si es creación, agregar el nuevo equipo
+        setTeams((prev) => [data.team, ...prev]);
+      }
+
       alertSuccess(editingTeam ? '✅ Equipo actualizado correctamente' : '✅ Equipo creado exitosamente');
       handleCloseDialog();
-      fetchTeams();
     } catch (error) {
       if (error.message.includes('413')) {
         alertError('❌ La imagen es demasiado grande. Máximo 5MB');
@@ -498,18 +559,23 @@ const Teams = () => {
       }
     } finally {
       setLoading(false);
+      setUpdatingTeamId(null);
     }
   };
 
   const handleDeleteTeam = async (teamId) => {
-    if (!window.confirm('¿Estás seguro de que deseas eliminar este equipo?')) {
-      return;
-    }
+    setTeamToDelete(teamId);
+    setDeleteConfirmOpen(true);
+  };
 
+  const confirmDeleteTeam = async () => {
+    if (!teamToDelete) return;
+
+    setDeleteConfirmOpen(false);
     setLoading(true);
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/teams/${teamId}`,
+        `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/teams/${teamToDelete}`,
         {
           method: 'DELETE',
           headers: {
@@ -525,17 +591,19 @@ const Teams = () => {
         return;
       }
 
+      // Actualizar estado local inmediatamente
+      setTeams((prev) => prev.filter((t) => t._id !== teamToDelete));
+      setCurrentPage(1);
       alertSuccess('✅ Equipo eliminado correctamente');
-      fetchTeams();
     } catch (error) {
       alertError(`❌ Error: ${error.message || 'No se pudo eliminar el equipo'}`);
     } finally {
       setLoading(false);
+      setTeamToDelete(null);
     }
-  };
+  }
 
   const handleUpdateMemberRoles = async (teamId, memberRoles) => {
-    setLoading(true);
     try {
       const response = await fetch(
         `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/teams/${teamId}/member-roles`,
@@ -552,18 +620,20 @@ const Teams = () => {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMsg = errorData.error || 'Error al actualizar los roles';
-        showSimpleAlert(`❌ Error: ${errorMsg}`, 'error', 2300);
+        alertError(`❌ Error: ${errorMsg}`);
         return false;
       }
 
-      // Actualiza los datos sin mostrar alerta aquí
-      await fetchTeams();
+      // Actualizar estado local inmediatamente para reducir delay
+      setTeams((prev) =>
+        prev.map((t) =>
+          t._id === teamId ? { ...t, memberRoles } : t
+        )
+      );
       return true;
     } catch (error) {
-      showSimpleAlert(`❌ Error: ${error.message || 'No se pudo actualizar los roles'}`, 'error', 2300);
+      alertError(`❌ Error: ${error.message || 'No se pudo actualizar los roles'}`);
       return false;
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -591,6 +661,23 @@ const Teams = () => {
           {isMobile ? 'Nuevo' : 'Nuevo Equipo'}
         </Button>
       </Box>
+
+      {/* Buscador */}
+      {teams.length > 0 && (
+        <TextField
+          fullWidth
+          placeholder="Buscar por nombre, descripción o miembros..."
+          value={searchQuery}
+          onChange={handleSearchChange}
+          variant="outlined"
+          sx={{ mb: 3 }}
+          slotProps={{
+            input: {
+              startAdornment: '🔍',
+            },
+          }}
+        />
+      )}
 
       {teams.length === 0 ? (
         <Box
@@ -625,7 +712,7 @@ const Teams = () => {
       ) : isMobile ? (
         // Vista móvil: Tarjetas
         <Grid container spacing={2}>
-          {teams.map((team) => (
+          {paginatedTeams.map((team) => (
             <Grid item xs={12} key={team._id}>
               <Card>
                 <CardContent>
@@ -703,6 +790,28 @@ const Teams = () => {
             </Grid>
           ))}
         </Grid>
+      ) : filteredTeams.length === 0 ? (
+        // Sin resultados
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            py: 10,
+            px: 3,
+            backgroundColor: (t) => t.palette.background.paper,
+            borderRadius: 2,
+            border: (t) => `2px dashed ${t.palette.primary.main}`,
+          }}
+        >
+          <Typography variant="h6" sx={{ color: theme.palette.text.secondary, fontWeight: 600 }}>
+            🔍 Sin resultados
+          </Typography>
+          <Typography variant="body2" color="textSecondary" sx={{ mt: 1, textAlign: 'center' }}>
+            No se encontraron equipos que coincidan con tu búsqueda
+          </Typography>
+        </Box>
       ) : (
         // Vista escritorio: Tabla
         <TableContainer component={Paper}>
@@ -711,16 +820,20 @@ const Teams = () => {
               <TableRow>
                 <TableCell width="5%"></TableCell>
                 <TableCell sx={{ color: theme.palette.text.primary }}>Nombre</TableCell>
-                <TableCell sx={{ color: theme.palette.text.primary }}>Descripción</TableCell>
+                <TableCell sx={{ color: theme.palette.text.primary, minWidth: 350, width: '40%' }}>Descripción</TableCell>
                 <TableCell align="center" sx={{ color: theme.palette.text.primary }}>Miembros</TableCell>
-                <TableCell align="right" sx={{ color: theme.palette.text.primary }}>Acciones</TableCell>
+                <TableCell align="center" sx={{ color: theme.palette.text.primary }}>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {teams.map((team) => (
+              {paginatedTeams.map((team) => (
                 <TableRow key={team._id}>
                   <TableCell width="5%">
-                    <TeamImageModal imageUrl={team.image} teamName={team.name} />
+                    {team.image ? (
+                      <TeamImageModal imageUrl={team.image} teamName={team.name} />
+                    ) : (
+                      <NoTeamImageIcon size={35} />
+                    )}
                   </TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>
                     <Box>
@@ -732,7 +845,15 @@ const Teams = () => {
                       </Typography>
                     </Box>
                   </TableCell>
-                  <TableCell>{team.description || '-'}</TableCell>
+                  <TableCell>
+                    <Box sx={{ minHeight: 48, display: 'flex', alignItems: 'center' }}>
+                      {team.description ? (
+                        <Typography sx={{ wordBreak: 'break-word', color: theme.palette.text.primary }}>{team.description}</Typography>
+                      ) : (
+                        <Typography sx={{ color: theme.palette.text.secondary, fontStyle: 'italic' }}>Equipo sin descripción</Typography>
+                      )}
+                    </Box>
+                  </TableCell>
                   <TableCell align="center">
                     <TeamMembersDisplay 
                       members={team.members} 
@@ -744,55 +865,67 @@ const Teams = () => {
                       teamId={team._id}
                       currentUserId={user?.id}
                       onRolesUpdate={handleUpdateMemberRoles}
-                      onAlert={alertSuccess}
-                      onError={alertError}
                     />
                   </TableCell>
-                  <TableCell align="right">
-                    {canEditTeam(team) || canDeleteTeam(team) ? (
-                      <>
-                        {canAddMembers(team) && (
-                          <Button
-                            size="small"
-                            startIcon={<PersonAddIcon />}
-                            onClick={() => handleAddMembers(team)}
-                            sx={{ mr: 1 }}
-                          >
-                            Miembros
-                          </Button>
-                        )}
-                        {canEditTeam(team) && (
-                          <Button
-                            size="small"
-                            startIcon={<EditIcon />}
-                            onClick={() => handleOpenDialog(team)}
-                            sx={{ mr: 1 }}
-                          >
-                            Editar
-                          </Button>
-                        )}
-                        {canDeleteTeam(team) && (
-                          <Button
-                            size="small"
-                            color="error"
-                            startIcon={<DeleteIcon />}
-                            onClick={() => handleDeleteTeam(team._id)}
-                          >
-                            Eliminar
-                          </Button>
-                        )}
-                      </>
-                    ) : (
-                      <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                        Solo puedes ver este equipo
-                      </Typography>
-                    )}
+                  <TableCell align="center">
+                    <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center', alignItems: 'center' }}>
+                      {canAddMembers(team) && (
+                        <IconButton
+                          size="large"
+                          onClick={() => handleAddMembers(team)}
+                          title="Agregar miembros"
+                          sx={{ color: '#1b8735' }}
+                          disabled={updatingTeamId !== null}
+                        >
+                          <PersonAddIcon />
+                        </IconButton>
+                      )}
+                      {canEditTeam(team) && (
+                        <IconButton
+                          size="large"
+                          onClick={() => handleOpenDialog(team)}
+                          title="Editar equipo"
+                          sx={{ color: '#1b8735' }}
+                          disabled={updatingTeamId !== null}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      )}
+                      {canDeleteTeam(team) && (
+                        <IconButton
+                          size="large"
+                          onClick={() => handleDeleteTeam(team._id)}
+                          title="Eliminar equipo"
+                          sx={{ color: '#e53935' }}
+                          disabled={updatingTeamId !== null}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      )}
+                      {!(canEditTeam(team) || canDeleteTeam(team) || canAddMembers(team)) && (
+                        <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                          No tienes permiso
+                        </Typography>
+                      )}
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </TableContainer>
+      )}
+
+      {/* Paginación */}
+      {filteredTeams.length > itemsPerPage && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <Pagination
+            count={totalPages}
+            page={currentPage}
+            onChange={(e, value) => setCurrentPage(value)}
+            color="primary"
+          />
+        </Box>
       )}
 
       {/* Diálogo para crear/editar equipo */}
@@ -983,6 +1116,7 @@ const Teams = () => {
             variant="contained"
             color="primary"
             disabled={loading || !isFormValid()}
+            startIcon={loading ? <CircularProgress size={20} /> : undefined}
           >
             {editingTeam ? 'Actualizar' : 'Crear'}
           </Button>
@@ -997,9 +1131,74 @@ const Teams = () => {
           onSave={handleSaveMembers}
           selectedMembers={selectedTeamForMembers.members || []}
           currentMembers={selectedTeamForMembers.members || []}
-          canRemoveMembers={canAddMembers(selectedTeamForMembers)}
+          canRemoveMembers={selectedTeamForMembers?._id ? canAddMembers(selectedTeamForMembers) : true}
         />
       )}
+
+      {/* Dialog de confirmación para eliminar equipo */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: '12px',
+            bgcolor: theme.palette.mode === 'dark' ? '#2a2a2a' : '#fff',
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 8px 32px rgba(0, 0, 0, 0.5)'
+              : '0 8px 32px rgba(0, 0, 0, 0.1)',
+          },
+        }}
+      >
+        <DialogTitle sx={{ 
+          fontWeight: 600, 
+          fontSize: '1.2rem',
+          color: theme.palette.mode === 'dark' ? '#fff' : '#000',
+        }}>
+          ¿Deseas eliminar este equipo?
+        </DialogTitle>
+        <DialogContent sx={{
+          color: theme.palette.mode === 'dark' ? '#bbb' : '#666',
+          py: 2,
+        }}>
+          <Typography>
+            Esta acción no se puede deshacer. Se eliminarán todos los datos asociados con este equipo.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button 
+            onClick={() => setDeleteConfirmOpen(false)}
+            variant="outlined"
+            sx={{
+              borderColor: theme.palette.mode === 'dark' ? '#555' : '#ddd',
+              color: theme.palette.mode === 'dark' ? '#bbb' : '#666',
+              '&:hover': {
+                borderColor: theme.palette.mode === 'dark' ? '#777' : '#bbb',
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+              },
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={confirmDeleteTeam}
+            variant="contained"
+            sx={{
+              bgcolor: '#d32f2f',
+              color: '#fff',
+              '&:hover': {
+                bgcolor: '#b71c1c',
+              },
+              '&:disabled': {
+                bgcolor: '#ccc',
+              },
+            }}
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={20} sx={{ mr: 1 }} /> : null}
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
