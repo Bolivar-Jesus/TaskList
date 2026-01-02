@@ -742,6 +742,7 @@ const Teams = () => {
                       isSuperAdmin={getUserRoleInTeam(team) === 'superadmin'}
                       canAssignPermissions={canAssignPermissions(team)}
                       teamId={team._id}
+                      currentUserId={user?.id}
                       onRolesUpdate={handleUpdateMemberRoles}
                       onAlert={alertSuccess}
                       onError={alertError}
@@ -908,12 +909,18 @@ const Teams = () => {
                     const memberId = typeof member === 'string' ? member : (member._id || member.id);
                     const memberName = typeof member === 'string' ? `Miembro ${index + 1}` : member.name;
                     // Si estamos editando un equipo existente, verificar si tiene permiso canAddMembers
-                    const canDeleteMember = !editingTeam || canAddMembers(editingTeam);
+                    const canDeleteMemberByPermission = !editingTeam || canAddMembers(editingTeam);
+                    // Verificar si es el usuario actual o superadmin
+                    const isCurrentUser = memberId === user?.id;
+                    const isSuperAdmin = editingTeam && editingTeam.memberRoles?.some(mr => 
+                      (mr.userId === memberId || mr.userId._id === memberId) && mr.role === 'superadmin'
+                    );
+                    const canDeleteMember = canDeleteMemberByPermission && !isCurrentUser && !isSuperAdmin;
                     
                     return (
                       <Chip
                         key={memberId || index}
-                        label={memberName}
+                        label={memberName + (isCurrentUser ? ' (eres tú)' : isSuperAdmin ? ' (superadmin)' : '')}
                         onDelete={canDeleteMember ? () => {
                           setFormData((prev) => ({
                             ...prev,
@@ -940,7 +947,7 @@ const Teams = () => {
                               : (theme.palette.mode === 'dark' ? '#5a3a3a' : '#ffebee'),
                           },
                         }}
-                        title={!canDeleteMember ? 'No tienes permiso para eliminar miembros' : ''}
+                        title={isCurrentUser ? 'No puedes eliminarte a ti mismo del equipo' : isSuperAdmin ? 'No puedes eliminar al superadministrador' : !canDeleteMemberByPermission ? 'No tienes permiso para eliminar miembros' : ''}
                       />
                     );
                   })}

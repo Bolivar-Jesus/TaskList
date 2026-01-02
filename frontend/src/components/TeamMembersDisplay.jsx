@@ -21,7 +21,7 @@ import {
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import { showSimpleAlert } from '../utils/alert';
 
-const TeamMembersDisplay = ({ members = [], teamName = '', memberRoles = [], createdById = null, isSuperAdmin = false, canAssignPermissions = false, teamId = null, onRolesUpdate = null, onAlert = null, onError = null }) => {
+const TeamMembersDisplay = ({ members = [], teamName = '', memberRoles = [], createdById = null, isSuperAdmin = false, canAssignPermissions = false, teamId = null, currentUserId = null, onRolesUpdate = null, onAlert = null, onError = null }) => {
   const theme = useTheme();
   const [openMembersModal, setOpenMembersModal] = useState(false);
   const [openImageModal, setOpenImageModal] = useState(false);
@@ -231,7 +231,7 @@ const TeamMembersDisplay = ({ members = [], teamName = '', memberRoles = [], cre
       >
         <DialogTitle sx={{ color: theme.palette.text.primary, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>Miembros de {teamName}</span>
-          {isSuperAdmin && !editingRoles && (
+          {(isSuperAdmin || canAssignPermissions) && !editingRoles && (
             <button
               onClick={() => {
                 setEditingRoles(true);
@@ -320,6 +320,7 @@ const TeamMembersDisplay = ({ members = [], teamName = '', memberRoles = [], cre
               return 0;
             }).map((member) => {
               const imageUrl = getProfileImageUrl(member.picture);
+              const isCurrentUser = currentUserId && (member._id === currentUserId || member._id === currentUserId);
               const currentRole = editingRoles && tempRoles.length > 0
                 ? tempRoles.find(mr => 
                     mr.userId === member._id || 
@@ -328,6 +329,7 @@ const TeamMembersDisplay = ({ members = [], teamName = '', memberRoles = [], cre
                   )?.role || 'viewer'
                 : getMemberRole(member._id);
               const isSuperadmin = currentRole === 'superadmin';
+              const canEditThisUser = !isCurrentUser && !isSuperadmin;
               
               return (
                 <ListItem
@@ -365,7 +367,7 @@ const TeamMembersDisplay = ({ members = [], teamName = '', memberRoles = [], cre
                     </ListItemAvatar>
                     <Box sx={{ ml: 1, flex: 1 }}>
                       <Typography sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.5 }}>
-                        {member.name} {isSuperadmin && <span style={{ color: theme.palette.primary.main, fontSize: '0.85em' }}>(superadmin)</span>}
+                        {member.name} {isSuperadmin && <span style={{ color: theme.palette.primary.main, fontSize: '0.85em' }}>(superadmin)</span>}{isCurrentUser && <span style={{ color: theme.palette.mode === 'dark' ? '#ffb74d' : '#f57c00', fontSize: '0.85em', marginLeft: '4px' }}>(eres tú)</span>}
                       </Typography>
                       <Typography variant="caption" sx={{ display: 'block', color: theme.palette.text.secondary, mb: 0.25 }}>
                         {member.email}
@@ -394,6 +396,18 @@ const TeamMembersDisplay = ({ members = [], teamName = '', memberRoles = [], cre
                                 Superadministrador - No se puede cambiar
                               </Typography>
                             </Box>
+                          ) : isCurrentUser ? (
+                            <Box sx={{ 
+                              p: 1, 
+                              backgroundColor: theme.palette.mode === 'dark' ? '#664d1a' : '#fff3e0',
+                              borderRadius: '4px',
+                              border: '1px solid #ff9800',
+                              mt: 1
+                            }}>
+                              <Typography variant="caption" sx={{ color: theme.palette.mode === 'dark' ? '#ffb74d' : '#e65100', fontWeight: 600 }}>
+                                (eres tú) - No puedes cambiar tu propio rol
+                              </Typography>
+                            </Box>
                           ) : (
                             <FormControl size="small" sx={{ mt: 1, minWidth: 180 }}>
                               <Select
@@ -410,7 +424,7 @@ const TeamMembersDisplay = ({ members = [], teamName = '', memberRoles = [], cre
                             </FormControl>
                           )}
                           
-                          {currentRole === 'admin' && !isSuperadmin && (
+                          {currentRole === 'admin' && !isSuperadmin && !isCurrentUser && (
                             <Box sx={{ mt: 1, pl: 1, borderLeft: `3px solid ${theme.palette.primary.main}` }}>
                               <Typography variant="caption" sx={{ color: theme.palette.text.primary, fontWeight: 600, display: 'block', mb: 0.5 }}>
                                 Permisos (mínimo 1):
