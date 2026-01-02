@@ -1,14 +1,8 @@
 import React, { useState } from 'react';
-import {
-  Box,
-  Modal,
-  IconButton,
-  useTheme,
-} from '@mui/material';
-import ZoomOutIcon from '@mui/icons-material/ZoomOut';
+import { Box } from '@mui/material';
+import ImageViewer from './ImageViewer';
 
 const TeamImageModal = ({ imageUrl, teamName }) => {
-  const theme = useTheme();
   const [openModal, setOpenModal] = useState(false);
 
   if (!imageUrl) return null;
@@ -31,54 +25,14 @@ const TeamImageModal = ({ imageUrl, teamName }) => {
         />
       </Box>
 
-      <Modal
-        open={openModal}
+      <ImageViewer
+        imageUrl={imageUrl}
+        title={teamName}
         onClose={() => setOpenModal(false)}
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: 'rgba(0, 0, 0, 0.8)',
-          zIndex: 1300,
-        }}
+        isOpen={openModal}
       >
-        <Box
-          sx={{
-            maxWidth: '90vw',
-            maxHeight: '90vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            position: 'relative',
-          }}
-        >
-          <img
-            src={imageUrl}
-            alt={teamName}
-            style={{
-              maxWidth: '90vw',
-              maxHeight: '90vh',
-              objectFit: 'contain',
-              borderRadius: '8px',
-            }}
-          />
-          <IconButton
-            onClick={() => setOpenModal(false)}
-            sx={{
-              position: 'absolute',
-              top: 10,
-              right: 10,
-              bgcolor: 'rgba(0, 0, 0, 0.5)',
-              color: '#ffffff',
-              '&:hover': {
-                bgcolor: 'rgba(0, 0, 0, 0.8)',
-              },
-            }}
-          >
-            <ZoomOutIcon />
-          </IconButton>
-        </Box>
-      </Modal>
+        <div />
+      </ImageViewer>
     </>
   );
 };

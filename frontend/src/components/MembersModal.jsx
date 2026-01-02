@@ -87,8 +87,11 @@ const MembersModal = ({ open, onClose, onSave, selectedMembers = [], currentMemb
     }
   };
 
-  // Filtrar usuarios basado en búsqueda
+  // Filtrar usuarios basado en búsqueda, excluyendo al usuario actual
   const filteredUsers = users.filter((u) => {
+    // Excluir al usuario actual
+    if ((u._id || u.id) === user?.id) return false;
+    
     const searchLower = searchTerm.toLowerCase();
     return (
       (u.name && u.name.toLowerCase().includes(searchLower)) ||

@@ -11,6 +11,7 @@ import Tasks from './pages/Tasks';
 import Teams from './pages/Teams';
 import MainLayout from './components/MainLayout';
 import { alertSuccess, alertError } from './utils/alert';
+import { AlertProvider } from './context/AlertContext';
 import { useEffect } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 
@@ -155,10 +156,12 @@ function App() {
       <ThemeProvider theme={theme}>
         <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID || ''}>
           <AuthProvider>
-            <Router>
-              <CssBaseline />
-              <AppRoutes mode={mode} toggleMode={toggleMode} />
-            </Router>
+            <AlertProvider>
+              <Router>
+                <CssBaseline />
+                <AppRoutes mode={mode} toggleMode={toggleMode} />
+              </Router>
+            </AlertProvider>
           </AuthProvider>
         </GoogleOAuthProvider>
       </ThemeProvider>
