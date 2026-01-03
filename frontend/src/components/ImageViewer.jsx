@@ -41,7 +41,7 @@ const ImageViewer = ({ imageUrl, title, children, onClose, isOpen = true }) => {
 
   const handleWheel = (e) => {
     e.preventDefault();
-    const newZoom = Math.max(1, Math.min(3, zoom + (e.deltaY < 0 ? 0.2 : -0.2)));
+    const newZoom = Math.max(1, Math.min(10, zoom + (e.deltaY < 0 ? 0.2 : -0.2)));
     setZoom(newZoom);
 
     // Mantener posición dentro de límites con nuevo zoom
@@ -71,7 +71,7 @@ const ImageViewer = ({ imageUrl, title, children, onClose, isOpen = true }) => {
   };
 
   const handleZoomIn = () => {
-    const newZoom = Math.min(3, zoom + 0.2);
+    const newZoom = Math.min(10, zoom + 0.2);
     setZoom(newZoom);
     const clamped = getClampedPosition(position.x, position.y, newZoom);
     setPosition(clamped);
@@ -164,7 +164,7 @@ const ImageViewer = ({ imageUrl, title, children, onClose, isOpen = true }) => {
           >
             <IconButton
               onClick={handleZoomIn}
-              disabled={zoom >= 3}
+              disabled={zoom >= 10}
               sx={{
                 bgcolor: 'rgba(0, 0, 0, 0.5)',
                 color: '#fff',

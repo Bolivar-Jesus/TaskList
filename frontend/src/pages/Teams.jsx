@@ -818,11 +818,11 @@ const Teams = () => {
           <Table>
             <TableHead sx={{ backgroundColor: theme.palette.mode === 'dark' ? '#555' : '#f5f5f5' }}>
               <TableRow>
-                <TableCell width="5%"></TableCell>
+                <TableCell width="5%" sx={{ color: theme.palette.text.primary }}>Logo</TableCell>
                 <TableCell sx={{ color: theme.palette.text.primary }}>Nombre</TableCell>
                 <TableCell sx={{ color: theme.palette.text.primary, minWidth: 350, width: '40%' }}>Descripción</TableCell>
-                <TableCell align="center" sx={{ color: theme.palette.text.primary }}>Miembros</TableCell>
-                <TableCell align="center" sx={{ color: theme.palette.text.primary }}>Acciones</TableCell>
+                <TableCell sx={{ color: theme.palette.text.primary }}>Miembros</TableCell>
+                <TableCell sx={{ color: theme.palette.text.primary }}>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -854,7 +854,7 @@ const Teams = () => {
                       )}
                     </Box>
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell>
                     <TeamMembersDisplay 
                       members={team.members} 
                       teamName={team.name}
@@ -867,7 +867,7 @@ const Teams = () => {
                       onRolesUpdate={handleUpdateMemberRoles}
                     />
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell>
                     <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center', alignItems: 'center' }}>
                       {canAddMembers(team) && (
                         <IconButton
