@@ -6,18 +6,21 @@ const taskSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      minlength: 3,
-      maxlength: 30,
+      minlength: 2,
+      maxlength: 20,
     },
     description: {
       type: String,
       trim: true,
+      minlength: 5,
       maxlength: 50,
-      default: '',
+      required: true,
     },
-    image: {
-      type: String, // URL de la imagen almacenada
-      default: null,
+    priority: {
+      type: String,
+      enum: ['low', 'medium', 'high', 'critical'],
+      default: 'medium',
+      required: true,
     },
     status: {
       type: String,
@@ -29,47 +32,36 @@ const taskSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
-    assignedTo: [
+    assignedTeams: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
+        ref: 'Team',
       },
     ],
     dueDate: {
       type: Date,
       required: true,
     },
-    dueTimeStart: {
+    startTime: {
       type: String, // Formato HH:mm
       default: null,
     },
-    dueTimeEnd: {
+    endTime: {
       type: String, // Formato HH:mm
       default: null,
     },
-    completedBy: [
-      {
-        user: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'User',
-        },
-        completedAt: {
-          type: Date,
-          default: Date.now,
-        },
-        completionNote: {
-          type: String,
-          trim: true,
-          maxlength: 200,
-        },
-        completionImages: [
-          {
-            type: String, // URLs de imágenes
-          },
-        ],
-      },
-    ],
+    googleCalendarEventId: {
+      type: String, // ID del evento en Google Calendar
+      default: null,
+    },
+    emailSent: {
+      type: Boolean,
+      default: false,
+    },
+    emailSentAt: {
+      type: Date,
+      default: null,
+    },
     createdAt: {
       type: Date,
       default: Date.now,
@@ -86,7 +78,7 @@ const taskSchema = new mongoose.Schema(
 
 // Índices para búsquedas eficientes
 taskSchema.index({ createdBy: 1 });
-taskSchema.index({ assignedTo: 1 });
+taskSchema.index({ assignedTeams: 1 });
 taskSchema.index({ status: 1 });
 taskSchema.index({ dueDate: 1 });
 
