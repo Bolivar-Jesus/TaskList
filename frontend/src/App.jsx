@@ -6,7 +6,6 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
-import CreateTask from './pages/CreateTask';
 import Tasks from './pages/Tasks';
 import Teams from './pages/Teams';
 import MainLayout from './components/MainLayout';
@@ -62,16 +61,6 @@ function AppRoutes({ mode, toggleMode }) {
           <ProtectedRoute>
             <MainLayout mode={mode} toggleMode={toggleMode}>
               <Dashboard />
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/create-task"
-        element={
-          <ProtectedRoute>
-            <MainLayout mode={mode} toggleMode={toggleMode}>
-              <CreateTask />
             </MainLayout>
           </ProtectedRoute>
         }

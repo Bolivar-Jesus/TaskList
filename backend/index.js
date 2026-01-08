@@ -7,6 +7,7 @@ import { connectDB } from './config/database.js';
 import User from './models/User.js';
 import userRoutes from './routes/users.js';
 import teamRoutes from './routes/teams.js';
+import taskRoutes from './routes/tasks.js';
 
 dotenv.config();
 
@@ -49,6 +50,9 @@ app.use('/api/users', userRoutes);
 
 // Rutas de equipos
 app.use('/api/teams', teamRoutes);
+
+// Rutas de tareas
+app.use('/api/tasks', taskRoutes);
 
 // Ruta para verificar el token de Google enviado desde el frontend
 app.post('/auth/google', async (req, res) => {

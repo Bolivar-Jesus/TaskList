@@ -201,7 +201,7 @@ const CreateTask = () => {
             description: formData.description,
             priority: formData.priority,
             dueDate: formData.dueDate,
-            teamId: formData.team,
+            assignedTeams: [formData.team],
           }),
         }
       );
